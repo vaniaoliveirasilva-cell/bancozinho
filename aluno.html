@@ -3,18 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Área do Cliente - Conexão Dinâmica</title>
+    <title>Área do Cliente</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #eef2f7; color: #333; }
-        h1, h2 { color: #2c3e50; text-align: center; }
         .container { max-width: 450px; margin: 20px auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .secao { margin-top: 20px; padding-top: 20px; border-top: 1px solid #edf2f7; }
         .input-group { display: flex; align-items: center; margin: 10px 0; }
         .input-group span { background: #edf2f7; padding: 12px; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; font-weight: bold; }
         .input-group input { border-radius: 0 6px 6px 0; margin: 0; }
-        .conta-group { display: flex; gap: 8px; margin: 8px 0; }
-        .conta-group input#loginConta { flex: 3; }
-        .conta-group input#loginDigito { flex: 1; text-align: center; }
         input, select, button { padding: 12px; margin: 8px 0; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; }
         button { background-color: #8e44ad; color: white; border: none; cursor: pointer; font-weight: bold; }
         button:hover { background-color: #732d91; }
@@ -22,47 +18,43 @@
         .saldo-val { font-size: 32px; font-weight: bold; margin-top: 5px; color: #2ecc71; }
         .oculto { display: none; }
         .config-aluno { background: #fff3cd; padding: 10px; border-radius: 6px; border: 1px solid #ffeeba; font-size: 12px; margin-bottom: 15px; }
-        .status-aluno { text-align: center; font-weight: bold; font-size: 13px; color: #e67e22; margin-top: 5px; }
+        .status-aluno { text-align: center; font-weight: bold; font-size: 13px; color: #e67e22; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="config-aluno">
-        <label>🔗 Vincular Link da Planilha do Evento:</label>
-        <input type="text" id="urlPlanilhaAluno" placeholder="Cole o link da planilha aqui" oninput="processarLinkAluno()">
-        <div id="statusConexaoAluno" class="status-aluno">Aguardando link da planilha...</div>
+        <label>🔗 Planilha do Evento:</label>
+        <input type="text" id="urlPlanilhaAluno" placeholder="Link da planilha..." oninput="processarLinkAluno()">
+        <div id="statusConexaoAluno" class="status-aluno">Aguardando link...</div>
     </div>
 
-    <h1 id="nomeBancoExibicao">🏦 BANCO ZINHO</h1>
+    <h2>🏦 BANCO ZINHO</h2>
     
     <div id="telaLogin">
-        <p class="welcome-text" style="text-align:center; color:#666;">Digite seus dados para acessar a conta.</p>
-        <div class="conta-group">
-            <input type="text" id="loginConta" placeholder="Conta (Ex: 0001)">
-            <input type="text" id="loginDigito" placeholder="Dg" value="0" disabled style="background: #f1f5f9; color: #94a3b8;">
-        </div>
-        <input type="password" id="loginSenha" placeholder="Sua senha eletrônica (Padrão: 1234)">
-        <button onclick="fazerLoginAluno()" style="background-color: #27ae60;">Acessar Conta Segura 🔐</button>
+        <input type="text" id="loginConta" placeholder="Número da Conta (Ex: 0001)">
+        <input type="password" id="loginSenha" placeholder="Senha Eletrônica (Padrão: 1234)">
+        <button onclick="fazerLoginAluno()" style="background-color: #27ae60;">Entrar no Banco 🔐</button>
     </div>
 
     <div id="telaDashboard" class="oculto">
-        <p>Olá, <strong id="nomeClienteLogado">Cliente</strong>!</p>
+        <p>Olá, <strong id="nomeClienteLogado">...</strong>!</p>
         <div class="saldo-box">
             <div>Seu Saldo Disponível</div>
             <div class="saldo-val" id="saldoClienteLogado">R$ 0,00</div>
         </div>
 
         <div class="secao">
-            <h2>Enviar um Pix ⚡</h2>
-            <select id="pixDestino"><option value="">Selecione quem vai receber...</option></select>
+            <h3>Enviar Pix ⚡</h3>
+            <select id="pixDestino"><option value="">Selecione o destinatário...</option></select>
             <div class="input-group">
                 <span>R$</span>
                 <input type="number" id="pixValor" placeholder="0,00" step="0.01">
             </div>
-            <button onclick="enviarPixAluno()">Confirmar Pix ⚡</button>
+            <button onclick="enviarPixAluno()">Enviar Pix Agora ⚡</button>
         </div>
-        <button onclick="location.reload()" style="background-color: #e74c3c;">Sair com Segurança 🚪</button>
+        <button onclick="location.reload()" style="background-color: #e74c3c; margin-top: 15px;">Sair 🚪</button>
     </div>
 </div>
 
@@ -71,7 +63,6 @@ let bancoDados = [];
 let idPlanilha = "";
 let clienteLogado = null;
 
-// Carrega automaticamente a planilha salva ao abrir a página do aluno
 window.onload = function() {
     const linkSalvo = localStorage.getItem('linkPlanilhaUniversal');
     if(linkSalvo) {
@@ -89,75 +80,54 @@ function processarLinkAluno(autoCarregar = false) {
         idPlanilha = match[1];
         localStorage.setItem('linkPlanilhaUniversal', url);
         document.getElementById('statusConexaoAluno').innerHTML = "<span style='color: #27ae60;'>🟢 Banco Conectado!</span>";
-        if(autoCarregar) {
-            puxarDadosAluno();
-        }
-    } else {
-        document.getElementById('statusConexaoAluno').innerHTML = "<span style='color: #c0392b;'>❌ Link inválido.</span>";
+        if(autoCarregar) puxarDadosAluno();
     }
 }
 
 async function puxarDadosAluno() {
     if(!idPlanilha) return;
-    const urlLeitura = `https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json`;
+    const urlCSV = `https://docs.google.com/spreadsheets/d/${idPlanilha}/export?format=csv&gid=0`;
     
     try {
-        const response = await fetch(urlLeitura);
-        const texto = await response.text();
-        const jsonPuro = JSON.parse(texto.substr(47).slice(0, -2));
-        const linhas = jsonPuro.table.rows;
+        const response = await fetch(urlCSV);
+        const textoCSV = await response.text();
+        const linhas = textoCSV.split(/\r?\n/);
         
         bancoDados = [];
-        linhas.forEach((linha, index) => {
-            if(index === 0 && linha.c[0] && isNaN(linha.c[0].v)) return;
+        for(let i = 1; i < linhas.length; i++) {
+            if(!linhas[i]) continue;
+            const colunas = linhas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             
-            if(linha.c && linha.c[0] !== null && linha.c[1] !== null) {
-                let saldoBruto = 0;
-                if (linha.c[2]) {
-                    if (typeof linha.c[2].v === 'number') {
-                        saldoBruto = linha.c[2].v;
-                    } else {
-                        saldoBruto = parseFloat(linha.c[2].v.toString().replace(',', '.'));
-                    }
+            if(colunas[0] && colunas[1]) {
+                let saldoTexto = colunas[2] ? colunas[2].replace(/"/g, '').replace('R$', '').trim() : "0";
+                if(saldoTexto.includes(',') && saldoTexto.includes('.')) {
+                    saldoTexto = saldoTexto.replace(/\./g, '').replace(',', '.');
+                } else {
+                    saldoTexto = saldoTexto.replace(',', '.');
                 }
-
+                
                 bancoDados.push({
-                    conta: linha.c[0] ? linha.c[0].v.toString().padStart(4, '0') : index.toString().padStart(4, '0'),
-                    nome: linha.c[1] ? linha.c[1].v.toString().toUpperCase() : "SEM NOME",
-                    saldo: isNaN(saldoBruto) ? 0 : saldoBruto,
-                    senha: "1234" // Senha padrão de acesso
+                    conta: colunas[0].replace(/"/g, '').trim().padStart(4, '0'),
+                    nome: colunas[1].replace(/"/g, '').trim().toUpperCase(),
+                    saldo: parseFloat(saldoTexto) || 0,
+                    senha: "1234"
                 });
             }
-        });
+        }
         if(clienteLogado) reatualizarContaLogada();
-    } catch (e) { 
-        console.log("Erro de sincronização"); 
-    }
+    } catch (e) { console.log(e); }
 }
 
 async function fazerLoginAluno() {
     const contaDig = document.getElementById('loginConta').value.trim();
     const senhaDig = document.getElementById('loginSenha').value.trim();
 
-    // Garante que está lendo os saldos mais novos da planilha antes de logar
     await puxarDadosAluno();
-
-    if(bancoDados.length === 0) {
-        alert("Planilha vazia ou não conectada. Verifique o link no topo.");
-        return;
-    }
 
     const conta = bancoDados.find(p => parseInt(p.conta, 10) === parseInt(contaDig, 10));
 
-    if (!conta) {
-        alert("Conta não encontrada!");
-        return;
-    }
-
-    if (senhaDig !== conta.senha) {
-        alert("Senha incorreta! Use a senha padrão: 1234");
-        return;
-    }
+    if (!conta) { alert("Conta não encontrada!"); return; }
+    if (senhaDig !== conta.senha) { alert("Senha incorreta!"); return; }
 
     clienteLogado = conta;
     document.getElementById('telaLogin').classList.add('oculto');
@@ -180,13 +150,11 @@ function atualizarTelaPainel() {
     const select = document.getElementById('pixDestino');
     select.innerHTML = '<option value="">Selecione quem vai receber...</option>';
     
-    // Organiza em ordem alfabética para os alunos acharem fácil
     bancoDados.sort((a, b) => a.nome.localeCompare(b.nome));
-    
     bancoDados.forEach(p => {
         if(p.conta !== clienteLogado.conta) {
-            let opt = document.createElement('option'); 
-            opt.value = p.nome; 
+            let opt = document.createElement('option');
+            opt.value = p.nome;
             opt.textContent = p.nome;
             select.appendChild(opt);
         }
@@ -197,26 +165,16 @@ function enviarPixAluno() {
     const dest = document.getElementById('pixDestino').value;
     const val = parseFloat(document.getElementById('pixValor').value);
 
-    if (!dest || isNaN(val) || val <= 0) {
-        alert("Preencha o valor do Pix corretamente.");
-        return;
-    }
-
-    if (clienteLogado.saldo < val) {
-        alert("Saldo insuficiente para enviar este Pix!");
-        return;
-    }
+    if (!dest || isNaN(val) || val <= 0) { alert("Preencha o valor corretamente."); return; }
+    if (clienteLogado.saldo < val) { alert("Saldo insuficiente!"); return; }
 
     const contaDestino = bancoDados.find(p => p.nome === dest);
-    
-    // Executa a transferência matemática na tela
     clienteLogado.saldo -= val;
     contaDestino.saldo += val;
 
     document.getElementById('pixValor').value = '';
     atualizarTelaPainel();
-    
-    alert(`⚡ Pix de R$ ${val.toFixed(2).replace('.',',')} enviado com sucesso para ${dest}!\n\n(Aviso: O administrador validará o saldo final).`);
+    alert(`⚡ Pix de R$ ${val.toFixed(2).replace('.',',')} enviado com sucesso para ${dest}!`);
 }
 </script>
 </body>
