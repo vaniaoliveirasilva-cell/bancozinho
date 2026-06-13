@@ -28,7 +28,7 @@
     <div class="config-url">
         <label style="font-weight: bold; color: #2980b9;">🔗 Link da Planilha do Ecossistema:</label>
         <input type="text" id="urlPlanilhaGoogle" value="https://docs.google.com/spreadsheets/d/1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4/edit?gid=0#gid=0" readonly style="background:#f1f5f9; color:#64748b;">
-        <div id="statusConexao" class="status-msg">🟢 Estrutura de 6 colunas integrada!</div>
+        <div id="statusConexao" class="status-msg">🟢 Leitor universal de 6 colunas ativado!</div>
     </div>
 
     <div class="secao">
@@ -49,7 +49,7 @@
                 </tr>
             </thead>
             <tbody id="tabelaSaldos">
-                <tr><td colspan="5" style="text-align:center; color:#999;">Clique no botão verde acima para ler os dados da nova estrutura.</td></tr>
+                <tr><td colspan="5" style="text-align:center; color:#999;">Clique no botão verde acima para carregar as informações.</td></tr>
             </tbody>
         </table>
     </div>
@@ -60,7 +60,7 @@ let bancoDados = [];
 const idPlanilha = "1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4"; 
 
 async function puxarDadosDaNuvem() {
-    document.getElementById('statusConexao').innerHTML = "🔄 Sincronizando com as 6 colunas da planilha...";
+    document.getElementById('statusConexao').innerHTML = "🔄 Sincronizando dados com o Google Sheets...";
     const urlCSV = `https://docs.google.com/spreadsheets/d/${idPlanilha}/pub?gid=0&output=csv`;
     
     try {
@@ -69,13 +69,24 @@ async function puxarDadosDaNuvem() {
         const linhas = textoCSV.split(/\r?\n/);
         bancoDados = [];
         
+        // Deteta dinamicamente o separador correto (Vírgula ou Ponto e Vírgula)
+        let separador = ",";
+        if (linhas[0] && linhas[0].includes(";")) {
+            separador = ";";
+        }
+        
         for(let i = 1; i < linhas.length; i++) {
             if(!linhas[i]) continue;
             
-            // Divide as colunas separadas por vírgula
-            const colunas = linhas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            // Quebra a linha usando o separador detetado automaticamente
+            let colunas = [];
+            if (separador === ";") {
+                colunas = linhas[i].split(/;(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            } else {
+                colunas = linhas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            }
             
-            // Verifica se pelo menos a conta e o nome existem nas colunas certas (A e C)
+            // Garante que temos as informações principais de Conta e Nome
             if(colunas[0] && colunas[2]) {
                 let contaLimpa = colunas[0].replace(/"/g, '').trim().padStart(4, '0');
                 let digitoLimpo = colunas[1] ? colunas[1].replace(/"/g, '').trim() : "0";
@@ -83,9 +94,10 @@ async function puxarDadosDaNuvem() {
                 let tipoLimpo = colunas[3] ? colunas[3].replace(/"/g, '').trim().toUpperCase() : "CLIENTE";
                 let senhaLimpa = colunas[4] ? colunas[4].replace(/"/g, '').trim() : "1234";
                 
-                // Pega o saldo lá na 6ª coluna (Índice 5 da lista)
+                // Trata o saldo na 6ª coluna (Índice 5)
                 let saldoTexto = colunas[5] ? colunas[5].replace(/"/g, '').replace('R$', '').trim() : "0";
                 
+                // Conversor universal de pontuação regional
                 if(saldoTexto.includes(',') && saldoTexto.includes('.')) {
                     saldoTexto = saldoTexto.replace(/\./g, '').replace(',', '.');
                 } else {
@@ -106,16 +118,20 @@ async function puxarDadosDaNuvem() {
         }
         
         atualizarInterface();
-        document.getElementById('statusConexao').innerHTML = `🟢 Sucesso! ${bancoDados.length} contas carregadas com saldos reais.`;
+        document.getElementById('statusConexao').innerHTML = `🟢 Sucesso! ${bancoDados.length} contas carregadas usando separador ('${separador}').`;
     } catch (erro) {
         console.error(erro);
-        document.getElementById('statusConexao').innerHTML = "<span style='color: #c0392b;'>❌ Erro. Certifique-se de que a planilha foi 'Publicada na Web' como CSV!</span>";
+        document.getElementById('statusConexao').innerHTML = "<span style='color: #c0392b;'>❌ Erro crítico de leitura. Verifique as configurações da planilha.</span>";
     }
 }
 
 function atualizarInterface() {
     const tabela = document.getElementById('tabelaSaldos');
     tabela.innerHTML = '';
+    if(bancoDados.length === 0) {
+        tabela.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999;">Nenhum dado legível foi encontrado. Verifique a linha 1 da planilha.</td></tr>`;
+        return;
+    }
     bancoDados.forEach(p => {
         tabela.innerHTML += `<tr>
             <td><code>${p.conta}-${p.digito}</code></td>
