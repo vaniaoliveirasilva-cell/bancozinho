@@ -86,7 +86,9 @@ function processarLinkAluno(autoCarregar = false) {
 
 async function puxarDadosAluno() {
     if(!idPlanilha) return;
-    const urlCSV = `https://docs.google.com/spreadsheets/d/${idPlanilha}/export?format=csv&gid=0`;
+    
+    // URL usando o recurso de pubhtml em formato CSV (Lê os dados publicados de forma pública e estável)
+    const urlCSV = `https://docs.google.com/spreadsheets/d/${idPlanilha}/pub?output=csv`;
     
     try {
         const response = await fetch(urlCSV);
@@ -96,10 +98,14 @@ async function puxarDadosAluno() {
         bancoDados = [];
         for(let i = 1; i < linhas.length; i++) {
             if(!linhas[i]) continue;
+            
+            // Separa as colunas respeitando as aspas do Google
             const colunas = linhas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             
             if(colunas[0] && colunas[1]) {
                 let saldoTexto = colunas[2] ? colunas[2].replace(/"/g, '').replace('R$', '').trim() : "0";
+                
+                // Ajusta pontuação decimal brasileira
                 if(saldoTexto.includes(',') && saldoTexto.includes('.')) {
                     saldoTexto = saldoTexto.replace(/\./g, '').replace(',', '.');
                 } else {
@@ -115,14 +121,22 @@ async function puxarDadosAluno() {
             }
         }
         if(clienteLogado) reatualizarContaLogada();
-    } catch (e) { console.log(e); }
+    } catch (e) { 
+        console.error("Erro ao sincronizar com a planilha publicada:", e); 
+    }
 }
 
 async function fazerLoginAluno() {
     const contaDig = document.getElementById('loginConta').value.trim();
     const senhaDig = document.getElementById('loginSenha').value.trim();
 
+    // Carrega os saldos atualizados antes do login
     await puxarDadosAluno();
+
+    if(bancoDados.length === 0) {
+        alert("O banco de dados ainda está vazio ou a planilha não foi 'Publicada na Web'. Verifique o Passo 1.");
+        return;
+    }
 
     const conta = bancoDados.find(p => parseInt(p.conta, 10) === parseInt(contaDig, 10));
 
@@ -174,7 +188,7 @@ function enviarPixAluno() {
 
     document.getElementById('pixValor').value = '';
     atualizarTelaPainel();
-    alert(`⚡ Pix de R$ ${val.toFixed(2).replace('.',',')} enviado com sucesso para ${dest}!`);
+    alert(`⚡ Pix de R$ ${val.toFixed(2).replace('.',',')} enviado com sucesso para ${dest}!\n\n(Atenção: Transação simulada localmente).`);
 }
 </script>
 </body>
