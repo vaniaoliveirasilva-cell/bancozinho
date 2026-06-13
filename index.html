@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BANCO ZINHO - Painel Admin Dinâmico</title>
+    <title>BANCO ZINHO - Painel Admin Supremo</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
         h1, h2 { color: #2c3e50; text-align: center; }
@@ -27,7 +27,7 @@
     
     <div class="config-url">
         <label style="font-weight: bold; color: #2980b9;">🔗 Cole o Link de Compartilhamento da sua Planilha Google:</label>
-        <input type="text" id="urlPlanilhaGoogle" placeholder="Cole aqui o link da planilha..." oninput="processarLinkInstantaneo()">
+        <input type="text" id="urlPlanilhaGoogle" placeholder="Cole aqui o link normal ou de publicação da planilha..." oninput="processarLinkInstantaneo()">
         <div id="statusConexao" class="status-msg">Aguardando link...</div>
     </div>
 
@@ -48,7 +48,7 @@
                 </tr>
             </thead>
             <tbody id="tabelaSaldos">
-                <tr><td colspan="4" style="text-align:center; color:#999;">Nenhum dado carregado. Cole o link acima.</td></tr>
+                <tr><td colspan="4" style="text-align:center; color:#999;">Nenhum dado carregado. Cole o link acima e clique no botão azul.</td></tr>
             </tbody>
         </table>
     </div>
@@ -57,6 +57,7 @@
 <script>
 let bancoDados = [];
 let idPlanilha = "";
+let ehLinkPublicado = false;
 
 window.onload = function() {
     const linkSalvo = localStorage.getItem('linkPlanilhaUniversal');
@@ -70,8 +71,112 @@ function processarLinkInstantaneo(autoCarregar = false) {
     const url = document.getElementById('urlPlanilhaGoogle').value.trim();
     if(!url) return;
 
-    const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-    if (match && match[1]) {
-        idPlanilha = match[1];
+    // Detecta se colaram o link de Publicação na Web ou o link Normal de Compartilhamento
+    if (url.includes("/pub?")) {
+        const matchPub = url.match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+        if(matchPub) {
+            idPlanilha = matchPub[1];
+            ehLinkPublicado = true;
+            localStorage.setItem('linkPlanilhaUniversal', url);
+            document.getElementById('statusConexao').innerHTML = "<span style='color: #27ae60;'>🟢 Link de Publicação Detectado!</span>";
+            if(autoCarregar) puxarDadosDaNuvem();
+            return;
+        }
+    }
+
+    const matchNormal = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (matchNormal && matchNormal[1]) {
+        idPlanilha = matchNormal[1];
+        ehLinkPublicado = false;
         localStorage.setItem('linkPlanilhaUniversal', url);
-        document.getElementById('statusConexao').innerHTML = "<span style='
+        document.getElementById('statusConexao').innerHTML = "<span style='color: #27ae60;'>🟢 Planilha Normal Detectada!</span>";
+        if(autoCarregar) puxarDadosDaNuvem();
+    } else {
+        document.getElementById('statusConexao').innerHTML = "<span style='color: #c0392b;'>❌ Link inválido. Copie o link completo do navegador ou de compartilhamento.</span>";
+    }
+}
+
+async function puxarDadosDaNuvem() {
+    if(!idPlanilha) {
+        alert("Cole o link da planilha primeiro!");
+        return;
+    }
+    
+    document.getElementById('statusConexao').innerHTML = "🔄 Sincronizando dados com o Google Sheets...";
+    
+    // Escolhe a melhor URL de transmissão baseada no link que você colou
+    const urlFinal = ehLinkPublicado 
+        ? `https://docs.google.com/spreadsheets/d/${idPlanilha}/pub?output=csv`
+        : `https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json`;
+    
+    try {
+        const response = await fetch(urlFinal);
+        const texto = await response.text();
+        
+        bancoDados = [];
+        
+        if (ehLinkPublicado || !texto.startsWith("/*")) {
+            // Processamento caso o link lido retorne formato CSV
+            const linhas = texto.split(/\r?\n/);
+            for(let i = 1; i < linhas.length; i++) {
+                if(!linhas[i]) continue;
+                const colunas = linhas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if(colunas[0] && colunas[1]) {
+                    let saldoTexto = colunas[2] ? colunas[2].replace(/"/g, '').replace('R$', '').trim() : "0";
+                    saldoTexto = saldoTexto.includes(',') && saldoTexto.includes('.') ? saldoTexto.replace(/\./g, '').replace(',', '.') : saldoTexto.replace(',', '.');
+                    
+                    bancoDados.push({
+                        conta: colunas[0].replace(/"/g, '').trim().padStart(4, '0'),
+                        nome: colunas[1].replace(/"/g, '').trim().toUpperCase(),
+                        saldo: parseFloat(saldoTexto) || 0
+                    });
+                }
+            }
+        } else {
+            // Processamento caso o link retorne formato JSON (Link normal)
+            const jsonPuro = JSON.parse(texto.substr(47).slice(0, -2));
+            const linhas = jsonPuro.table.rows;
+            
+            linhas.forEach((linha, index) => {
+                if(index === 0 && linha.c[0] && isNaN(linha.c[0].v)) return; 
+                if(linha.c && linha.c[0] !== null && linha.c[1] !== null) {
+                    let saldoBruto = 0;
+                    if (linha.c[2]) {
+                        saldoBruto = typeof linha.c[2].v === 'number' ? linha.c[2].v : parseFloat(linha.c[2].v.toString().replace(',', '.'));
+                    }
+                    bancoDados.push({
+                        conta: linha.c[0].v.toString().padStart(4, '0'),
+                        nome: linha.c[1].v.toString().toUpperCase(),
+                        saldo: isNaN(saldoBruto) ? 0 : saldoBruto
+                    });
+                }
+            });
+        }
+        
+        atualizarInterface();
+        document.getElementById('statusConexao').innerHTML = `<span style='color: #27ae60;'>🟢 Sucesso! ${bancoDados.length} contas carregadas com saldos.</span>`;
+    } catch (erro) {
+        console.error(erro);
+        document.getElementById('statusConexao').innerHTML = "<span style='color: #c0392b;'>❌ Erro na leitura. Certifique-se de que a planilha está compartilhada para 'Qualquer pessoa com o link' como 'Editor'.</span>";
+    }
+}
+
+function atualizarInterface() {
+    const tabela = document.getElementById('tabelaSaldos');
+    tabela.innerHTML = '';
+    if(bancoDados.length === 0) {
+        tabela.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999;">Nenhum dado encontrado.</td></tr>`;
+        return;
+    }
+    bancoDados.forEach(p => {
+        tabela.innerHTML += `<tr>
+            <td><code>${p.conta}</code></td>
+            <td>${p.nome}</td>
+            <td><code>1234</code></td>
+            <td style="font-weight:bold; color:#27ae60;">${p.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        </tr>`;
+    });
+}
+</script>
+</body>
+</html>
