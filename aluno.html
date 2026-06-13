@@ -185,16 +185,13 @@ function atualizarTelaPainel() {
 }
 async function enviarPixAluno() {
 
+    alert("PIX iniciado");
+
     const dest = document.getElementById('pixDestino').value;
     const val = parseFloat(document.getElementById('pixValor').value);
 
     if (!dest || isNaN(val) || val <= 0) {
-        alert("Selecione o destinatário e digite um valor válido.");
-        return;
-    }
-
-    if (clienteLogado.saldo < val) {
-        alert("Saldo insuficiente!");
+        alert("Valor inválido");
         return;
     }
 
@@ -219,6 +216,16 @@ async function enviarPixAluno() {
             }
         );
 
+        const resultado = await resposta.json();
+
+        alert(JSON.stringify(resultado));
+
+    } catch (erro) {
+
+        alert("ERRO: " + erro.message);
+
+    }
+}
         const resultado = await resposta.json();
 
         if (resultado.sucesso) {
