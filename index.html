@@ -28,11 +28,11 @@
     <div class="config-url">
         <label style="font-weight: bold; color: #2980b9;">🔗 Link da Planilha do Ecossistema:</label>
         <input type="text" id="urlPlanilhaGoogle" value="https://docs.google.com/spreadsheets/d/1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4/edit?gid=0#gid=0" readonly style="background:#f1f5f9; color:#64748b;">
-        <div id="statusConexao" class="status-msg">🟢 Leitor universal de 6 colunas ativado!</div>
+        <div id="statusConexao" class="status-msg">🟢 Conexão direta por JSON ativada!</div>
     </div>
 
     <div class="secao">
-        <h2>1. Sincronização Automática</h2>
+        <h2>1. Sincronização Direta</h2>
         <button onclick="puxarDadosDaNuvem()" style="background-color: #27ae60; font-size: 16px;">🔄 Ler / Atualizar Dados da Planilha</button>
     </div>
 
@@ -60,51 +60,42 @@ let bancoDados = [];
 const idPlanilha = "1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4"; 
 
 async function puxarDadosDaNuvem() {
-    document.getElementById('statusConexao').innerHTML = "🔄 Sincronizando dados com o Google Sheets...";
-    const urlCSV = `https://docs.google.com/spreadsheets/d/${idPlanilha}/pub?gid=0&output=csv`;
+    document.getElementById('statusConexao').innerHTML = "🔄 Buscando dados em tempo real...";
+    
+    // API do Google que puxa os dados formatados em JSON independente de publicação externa
+    const urlJSON = `https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json&gid=0`;
     
     try {
-        const response = await fetch(urlCSV);
-        const textoCSV = await response.text();
-        const linhas = textoCSV.split(/\r?\n/);
+        const response = await fetch(urlJSON);
+        const texto = await response.text();
+        
+        // Remove a proteção padrão que o Google coloca no JSON
+        const jsonPuro = JSON.parse(texto.substr(47).slice(0, -2));
+        const linhas = jsonPuro.table.rows;
+        
         bancoDados = [];
         
-        // Deteta dinamicamente o separador correto (Vírgula ou Ponto e Vírgula)
-        let separador = ",";
-        if (linhas[0] && linhas[0].includes(";")) {
-            separador = ";";
-        }
-        
-        for(let i = 1; i < linhas.length; i++) {
-            if(!linhas[i]) continue;
-            
-            // Quebra a linha usando o separador detetado automaticamente
-            let colunas = [];
-            if (separador === ";") {
-                colunas = linhas[i].split(/;(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            } else {
-                colunas = linhas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            }
-            
-            // Garante que temos as informações principais de Conta e Nome
-            if(colunas[0] && colunas[2]) {
-                let contaLimpa = colunas[0].replace(/"/g, '').trim().padStart(4, '0');
-                let digitoLimpo = colunas[1] ? colunas[1].replace(/"/g, '').trim() : "0";
-                let nomeLimpo = colunas[2].replace(/"/g, '').trim().toUpperCase();
-                let tipoLimpo = colunas[3] ? colunas[3].replace(/"/g, '').trim().toUpperCase() : "CLIENTE";
-                let senhaLimpa = colunas[4] ? colunas[4].replace(/"/g, '').trim() : "1234";
+        linhas.forEach((linha) => {
+            // Verifica se as colunas essenciais existem na linha
+            if (linha.c && linha.c[0] && linha.c[2]) {
                 
-                // Trata o saldo na 6ª coluna (Índice 5)
-                let saldoTexto = colunas[5] ? colunas[5].replace(/"/g, '').replace('R$', '').trim() : "0";
+                // Pega os valores brutos limpando textos e tratando nulos
+                let contaBruta = linha.c[0].v !== null ? linha.c[0].v.toString().trim() : "";
                 
-                // Conversor universal de pontuação regional
-                if(saldoTexto.includes(',') && saldoTexto.includes('.')) {
-                    saldoTexto = saldoTexto.replace(/\./g, '').replace(',', '.');
-                } else {
-                    saldoTexto = saldoTexto.replace(',', '.');
+                // Ignora a linha do cabeçalho caso ela apareça
+                if (contaBruta.toLowerCase() === "conta") return;
+
+                let contaLimpa = contaBruta.padStart(4, '0');
+                let digitoLimpo = (linha.c[1] && linha.c[1].v !== null) ? linha.c[1].v.toString().trim() : "0";
+                let nomeLimpo = (linha.c[2] && linha.c[2].v !== null) ? linha.c[2].v.toString().trim().toUpperCase() : "";
+                let tipoLimpo = (linha.c[3] && linha.c[3].v !== null) ? linha.c[3].v.toString().trim().toUpperCase() : "CLIENTE";
+                let senhaLimpa = (linha.c[4] && linha.c[4].v !== null) ? linha.c[4].v.toString().trim() : "1234";
+                
+                // O Saldo Atual está na 6ª coluna (Índice 5)
+                let saldoNumero = 0;
+                if (linha.c[5] && linha.c[5].v !== null) {
+                    saldoNumero = typeof linha.c[5].v === 'number' ? linha.c[5].v : parseFloat(linha.c[5].v.toString().replace(',', '.'));
                 }
-                
-                let saldoNumero = parseFloat(saldoTexto) || 0;
 
                 bancoDados.push({
                     conta: contaLimpa,
@@ -112,16 +103,16 @@ async function puxarDadosDaNuvem() {
                     nome: nomeLimpo,
                     tipo: tipoLimpo,
                     senha: senhaLimpa,
-                    saldo: saldoNumero
+                    saldo: isNaN(saldoNumero) ? 0 : saldoNumero
                 });
             }
-        }
+        });
         
         atualizarInterface();
-        document.getElementById('statusConexao').innerHTML = `🟢 Sucesso! ${bancoDados.length} contas carregadas usando separador ('${separador}').`;
+        document.getElementById('statusConexao').innerHTML = `🟢 Sucesso! ${bancoDados.length} contas carregadas via JSON.`;
     } catch (erro) {
         console.error(erro);
-        document.getElementById('statusConexao').innerHTML = "<span style='color: #c0392b;'>❌ Erro crítico de leitura. Verifique as configurações da planilha.</span>";
+        document.getElementById('statusConexao').innerHTML = "<span style='color: #c0392b;'>❌ Erro. Certifique-se de que o botão 'Compartilhar' da Planilha está para 'Qualquer pessoa com o link'.</span>";
     }
 }
 
@@ -129,7 +120,7 @@ function atualizarInterface() {
     const tabela = document.getElementById('tabelaSaldos');
     tabela.innerHTML = '';
     if(bancoDados.length === 0) {
-        tabela.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999;">Nenhum dado legível foi encontrado. Verifique a linha 1 da planilha.</td></tr>`;
+        tabela.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999;">Nenhum dado encontrado. Verifique se a planilha tem dados a partir da linha 2.</td></tr>`;
         return;
     }
     bancoDados.forEach(p => {
