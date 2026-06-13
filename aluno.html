@@ -13,7 +13,7 @@
         .input-group input { border-radius: 0 6px 6px 0; margin: 0; }
         .conta-group { display: flex; gap: 8px; margin: 8px 0; }
         .conta-group input#loginConta { flex: 3; }
-        .conta-group input#loginDigito { flex: 1; text-align: center; background: #ffffff; color: #333; }
+        .conta-group input#loginDigito { flex: 1; text-align: center; }
         input, select, button { padding: 12px; margin: 8px 0; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; }
         button { background-color: #8e44ad; color: white; border: none; cursor: pointer; font-weight: bold; }
         button:hover { background-color: #732d91; }
@@ -26,20 +26,24 @@
 <body>
 
 <div class="container">
-    <div id="statusConexaoAluno" class="status-aluno">🟢 Conectado à Rede de Transações</div>
+    <div id="statusConexaoAluno" class="status-aluno">🟢 Sistema Online</div>
 
     <h2>🏦 BANCO ZINHO</h2>
     
+    <!-- TELA DE LOGIN -->
     <div id="telaLogin">
-        <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Digite o número da conta, o dígito e a sua senha.</p>
+        <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Aceda introduzindo a sua conta, dígito e senha da planilha.</p>
+        
         <div class="conta-group">
-            <input type="text" id="loginConta" placeholder="Conta (Ex: 1)">
-            <input type="text" id="loginDigito" placeholder="Dg" title="Digite o dígito da sua conta">
+            <input type="text" id="loginConta" placeholder="Conta">
+            <input type="text" id="loginDigito" placeholder="Dígito">
         </div>
+        
         <input type="password" id="loginSenha" placeholder="Digite sua senha">
         <button onclick="fazerLoginAluno()" style="background-color: #27ae60;">Acessar Conta 🔐</button>
     </div>
 
+    <!-- PAINEL DO ALUNO LOGADO -->
     <div id="telaDashboard" class="oculto">
         <p>Olá, <strong id="nomeClienteLogado">...</strong>! (<span id="tipoClienteLogado">...</span>)</p>
         <div class="saldo-box">
@@ -47,10 +51,11 @@
             <div class="saldo-val" id="saldoClienteLogado">R$ 0,00</div>
         </div>
 
+        <!-- ENVIAR PIX -->
         <div class="secao">
             <h3>Enviar Pix ⚡</h3>
             <label for="pixDestino" style="font-size: 13px; font-weight: bold; color: #666;">Quem vai receber?</label>
-            <select id="pixDestino"><option value="">Carregando lista de contatos...</option></select>
+            <select id="pixDestino"><option value="">Carregando contatos...</option></select>
             
             <label for="pixValor" style="font-size: 13px; font-weight: bold; color: #666; display: block; margin-top: 10px;">Valor da transferência:</label>
             <div class="input-group">
@@ -81,7 +86,120 @@ async function puxarDadosAluno() {
         linhas.forEach((linha) => {
             if (linha.c && linha.c[0] && linha.c[2]) {
                 let contaBruta = linha.c[0].v !== null ? linha.c[0].v.toString().trim() : "";
-                
                 if (contaBruta.toLowerCase() === "conta") return;
 
-                // Trata caso
+                // Limpa traços caso existam e extrai o número da conta
+                let contaApenasNumeros = contaBruta.split('-')[0].trim();
+                let contaID = parseInt(contaApenasNumeros, 10);
+
+                let digitoPlanilha = (linha.c[1] && linha.c[1].v !== null) ? linha.c[1].v.toString().trim() : "";
+                let nomeLimpo = (linha.c[2] && linha.c[2].v !== null) ? linha.c[2].v.toString().trim().toUpperCase() : "";
+                let tipoLimpo = (linha.c[3] && linha.c[3].v !== null) ? linha.c[3].v.toString().trim().toUpperCase() : "CLIENTE";
+                let senhaLimpa = (linha.c[4] && linha.c[4].v !== null) ? linha.c[4].v.toString().trim() : "";
+
+                let saldoNumero = 0;
+                if (linha.c[5] && linha.c[5].v !== null) {
+                    saldoNumero = typeof linha.c[5].v === 'number' ? linha.c[5].v : parseFloat(linha.c[5].v.toString().replace(',', '.'));
+                }
+
+                if(!isNaN(contaID)) {
+                    bancoDados.push({
+                        contaNumero: contaID, 
+                        digito: digitoPlanilha,
+                        nome: nomeLimpo,
+                        tipo: tipoLimpo,
+                        senha: senhaLimpa,
+                        saldo: isNaN(saldoNumero) ? 0 : saldoNumero
+                    });
+                }
+            }
+        });
+        
+        if(clienteLogado) reatualizarContaLogada();
+    } catch (e) { 
+        console.error(e); 
+    }
+}
+
+async function fazerLoginAluno() {
+    const contaDig = document.getElementById('loginConta').value.trim();
+    const digitoDig = document.getElementById('loginDigito').value.trim();
+    const senhaDig = document.getElementById('loginSenha').value.trim();
+
+    if(!contaDig || !digitoDig || !senhaDig) { 
+        alert("Preencha todos os campos para entrar."); 
+        return; 
+    }
+
+    await puxarDadosAluno();
+
+    const contaDigitadaPura = parseInt(contaDig, 10);
+
+    // Validação estrita de Conta, Dígito e Senha
+    const conta = bancoDados.find(p => 
+        p.contaNumero === contaDigitadaPura && 
+        p.digito.toString() === digitoDig.toString()
+    );
+
+    if (!conta) { 
+        alert("Combinação de Conta e Dígito não encontrada!"); 
+        return; 
+    }
+    
+    if (senhaDig.toString() !== conta.senha.toString()) { 
+        alert("Senha incorreta!"); 
+        return; 
+    }
+
+    clienteLogado = conta;
+    document.getElementById('telaLogin').classList.add('oculto');
+    document.getElementById('telaDashboard').classList.remove('oculto');
+    atualizarTelaPainel();
+}
+
+function reatualizarContaLogada() {
+    const atualizada = bancoDados.find(p => p.contaNumero === clienteLogado.contaNumero && p.digito === clienteLogado.digito);
+    if(atualizada) {
+        clienteLogado = atualizada;
+        document.getElementById('saldoClienteLogado').textContent = clienteLogado.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+}
+
+function atualizarTelaPainel() {
+    document.getElementById('nomeClienteLogado').textContent = clienteLogado.nome;
+    document.getElementById('tipoClienteLogado').textContent = clienteLogado.tipo;
+    document.getElementById('saldoClienteLogado').textContent = clienteLogado.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    const select = document.getElementById('pixDestino');
+    select.innerHTML = '<option value="">Selecione quem vai receber...</option>';
+    
+    bancoDados.sort((a, b) => a.nome.localeCompare(b.nome));
+    bancoDados.forEach(p => {
+        if(!(p.contaNumero === clienteLogado.contaNumero && p.digito === clienteLogado.digito)) {
+            let opt = document.createElement('option');
+            opt.value = p.nome;
+            opt.textContent = `${p.nome} (Conta: ${p.contaNumero}-${p.digito})`;
+            select.appendChild(opt);
+        }
+    });
+}
+
+function enviarPixAluno() {
+    const dest = document.getElementById('pixDestino').value;
+    const val = parseFloat(document.getElementById('pixValor').value);
+
+    if (!dest || isNaN(val) || val <= 0) { alert("Selecione o destinatário e digite um valor válido."); return; }
+    if (clienteLogado.saldo < val) { alert("Saldo Insuficiente!"); return; }
+
+    const contaDestino = bancoDados.find(p => p.nome === dest);
+    
+    clienteLogado.saldo -= val;
+    contaDestino.saldo += val;
+
+    document.getElementById('pixValor').value = '';
+    atualizarTelaPainel();
+    alert(`⚡ Pix de R$ ${val.toFixed(2).replace('.',',')} enviado com sucesso para ${dest}.`);
+}
+</script>
+</body>
+</html>
