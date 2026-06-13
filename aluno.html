@@ -1,92 +1,11 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>BANCO ZINHO - Área do Cliente</title>
-    <style>
-        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
-        .container { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        input, button { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { background: #27ae60; color: white; border: none; cursor: pointer; }
-        .oculto { display: none; }
-        .historico { margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px; font-size: 14px; }
-    </style>
+    <title>Teste Banco</title>
 </head>
 <body>
-    <div class="container">
-        <div id="telaLogin">
-            <h2>Login</h2>
-            <input type="text" id="loginConta" placeholder="Conta">
-            <input type="text" id="loginDigito" placeholder="Dígito">
-            <input type="password" id="loginSenha" placeholder="Senha">
-            <button onclick="fazerLogin()">Acessar</button>
-        </div>
-        <div id="telaDashboard" class="oculto">
-            <h2>Olá, <span id="nomeUser"></span></h2>
-            <p>Saldo: <strong id="saldoUser"></strong></p>
-            <select id="pixDestino"></select>
-            <input type="number" id="pixValor" placeholder="Valor">
-            <button onclick="enviarPix()">Enviar Pix</button>
-            <div class="historico" id="listaHistorico"></div>
-            <button onclick="location.reload()" style="background:#e74c3c;">Sair</button>
-        </div>
-    </div>
-    <script>
-        let bancoDados = [], clienteLogado = null, historicoSessao = [];
-        const idPlanilha = "1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4";
-
-        async function carregarDados() {
-            const res = await fetch(`https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json`);
-            const texto = await res.text();
-            const json = JSON.parse(texto.substr(47).slice(0, -2));
-            bancoDados = json.table.rows.map(row => ({
-                conta: row.c[0].v.toString().split('-')[0].trim(),
-                digito: row.c[1].v.toString().trim(),
-                nome: row.c[2].v,
-                senha: row.c[4].v.toString(),
-                saldo: parseFloat(row.c[5].v)
-            }));
-        }
-
-        async function fazerLogin() {
-            await carregarDados();
-            const c = document.getElementById('loginConta').value.trim();
-            const d = document.getElementById('loginDigito').value.trim();
-            const s = document.getElementById('loginSenha').value.trim();
-            clienteLogado = bancoDados.find(p => p.conta === c && p.digito === d && p.senha === s);
-            
-            if (clienteLogado) {
-                document.getElementById('telaLogin').classList.add('oculto');
-                document.getElementById('telaDashboard').classList.remove('oculto');
-                document.getElementById('nomeUser').innerText = clienteLogado.nome;
-                document.getElementById('saldoUser').innerText = 'R$ ' + clienteLogado.saldo.toFixed(2);
-                atualizarSelect();
-            } else { alert("Dados incorretos."); }
-        }
-
-        function atualizarSelect() {
-            const sel = document.getElementById('pixDestino');
-            bancoDados.forEach(p => {
-                if (p.nome !== clienteLogado.nome) {
-                    let opt = document.createElement('option');
-                    opt.value = p.nome;
-                    opt.innerText = p.nome;
-                    sel.appendChild(opt);
-                }
-            });
-        }
-
-        function enviarPix() {
-            const dest = document.getElementById('pixDestino').value;
-            const valor = parseFloat(document.getElementById('pixValor').value);
-            if (clienteLogado.saldo >= valor) {
-                clienteLogado.saldo -= valor;
-                document.getElementById('saldoUser').innerText = 'R$ ' + clienteLogado.saldo.toFixed(2);
-                historicoSessao.push(`Para ${dest}: R$ ${valor.toFixed(2)}`);
-                document.getElementById('listaHistorico').innerHTML = historicoSessao.join('<br>');
-                alert("Pix enviado!");
-            } else { alert("Saldo insuficiente."); }
-        }
-    </script>
+    <h1>O sistema está online!</h1>
+    <p>Se você está a ver isto, o site está a carregar corretamente.</p>
 </body>
 </html>
