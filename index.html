@@ -9,10 +9,7 @@
         h1, h2 { color: #2c3e50; text-align: center; }
         .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .secao { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
-        .input-group { display: flex; align-items: center; margin: 5px 0; }
-        .input-group span { background: #eee; padding: 10px; border: 1px solid #ccc; border-right: none; border-radius: 4px 0 0 4px; font-weight: bold; }
-        .input-group input { border-radius: 0 4px 4px 0; margin: 0; }
-        input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
         button { background-color: #27ae60; color: white; border: none; cursor: pointer; font-weight: bold; }
         button:hover { background-color: #219653; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
@@ -28,30 +25,19 @@
 <div class="container">
     <h1>🏦 BANCO ZINHO - Administrador</h1>
     
-    <!-- ÁREA PARA COLAR O LINK DE QUALQUER PLANILHA -->
     <div class="config-url">
-        <label style="font-weight: bold; color: #2980b9;">🔗 Cole o Link de Partilha da sua Planilha Google:</label>
-        <input type="text" id="urlPlanilhaGoogle" placeholder="Cole aqui o link (Ex: https://docs.google.com/spreadsheets/d/...)" oninput="processarLinkInstantaneo()">
-        <div id="statusConexao" class="status-msg">Aguardando que cole o link de uma planilha válida...</div>
+        <label style="font-weight: bold; color: #2980b9;">🔗 Cole o Link de Compartilhamento da sua Planilha Google:</label>
+        <input type="text" id="urlPlanilhaGoogle" placeholder="Cole aqui o link da planilha..." oninput="processarLinkInstantaneo()">
+        <div id="statusConexao" class="status-msg">Aguardando link...</div>
     </div>
 
     <div class="secao">
-        <h2>1. Controlo do Painel</h2>
-        <button onclick="puxarDadosDaNuvem()" style="background-color: #3498db; font-size: 16px;">🔄 Atualizar Dados Manualmente</button>
+        <h2>1. Controle do Painel</h2>
+        <button onclick="puxarDadosDaNuvem()" style="background-color: #3498db; font-size: 16px;">🔄 Ler / Atualizar Dados da Planilha</button>
     </div>
 
     <div class="secao">
-        <h2>2. Adicionar Cliente Manualmente (Apenas no Painel)</h2>
-        <input type="text" id="nomeParticipante" placeholder="Nome do Cliente">
-        <div class="input-group">
-            <span>R$</span>
-            <input type="number" id="saldoInicial" placeholder="Saldo inicial (Ex: 10,50)" step="0.01">
-        </div>
-        <button onclick="cadastrarManual()">Adicionar à Lista Abaixo</button>
-    </div>
-
-    <div class="secao">
-        <h2>3. Base de Dados Carregada (Com Centavos 🪙)</h2>
+        <h2>2. Base de Dados Carregada</h2>
         <table>
             <thead>
                 <tr>
@@ -62,7 +48,7 @@
                 </tr>
             </thead>
             <tbody id="tabelaSaldos">
-                <tr><td colspan="4" style="text-align:center; color:#999;">Carregando informações automaticamente...</td></tr>
+                <tr><td colspan="4" style="text-align:center; color:#999;">Nenhum dado carregado. Cole o link acima.</td></tr>
             </tbody>
         </table>
     </div>
@@ -72,117 +58,20 @@
 let bancoDados = [];
 let idPlanilha = "";
 
-// Ao abrir a página, recupera o link salvo e já faz a leitura AUTOMÁTICA
 window.onload = function() {
     const linkSalvo = localStorage.getItem('linkPlanilhaUniversal');
     if(linkSalvo) {
         document.getElementById('urlPlanilhaGoogle').value = linkSalvo;
-        processarLinkInstantaneo(true); // 'true' indica para carregar direto
-    } else {
-        document.getElementById('tabelaSaldos').innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999;">Nenhum dado carregado. Cole o link acima.</td></tr>`;
+        processarLinkInstantaneo(true);
     }
 }
 
 function processarLinkInstantaneo(autoCarregar = false) {
     const url = document.getElementById('urlPlanilhaGoogle').value.trim();
-    if(!url) {
-        document.getElementById('statusConexao').innerHTML = "Aguardando link...";
-        return;
-    }
+    if(!url) return;
 
     const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-    
     if (match && match[1]) {
         idPlanilha = match[1];
         localStorage.setItem('linkPlanilhaUniversal', url);
-        document.getElementById('statusConexao').innerHTML = "<span style='color: #27ae60;'>🟢 Planilha conectada!</span>";
-        if(autoCarregar) {
-            puxarDadosDaNuvem();
-        }
-    } else {
-        document.getElementById('statusConexao').innerHTML = "<span style='color: #c0392b;'>❌ Link inválido. Certifique-se de copiar o link completo.</span>";
-        idPlanilha = "";
-    }
-}
-
-async function puxarDadosDaNuvem() {
-    if(!idPlanilha) return;
-    
-    document.getElementById('statusConexao').innerHTML = "🔄 Sincronizando saldos com o Google Sheets...";
-    const urlLeitura = `https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json`;
-    
-    try {
-        const response = await fetch(urlLeitura);
-        const texto = await response.text();
-        
-        const jsonPuro = JSON.parse(texto.substr(47).slice(0, -2));
-        const linhas = jsonPuro.table.rows;
-        
-        bancoDados = [];
-        
-        linhas.forEach((linha, index) => {
-            if(index === 0 && linha.c[0] && isNaN(linha.c[0].v)) return; 
-            
-            if(linha.c && linha.c[0] !== null && linha.c[1] !== null) {
-                // Trata o saldo para aceitar centavos tanto em formato texto do Google quanto número puro
-                let saldoBruto = 0;
-                if (linha.c[2]) {
-                    if (typeof linha.c[2].v === 'number') {
-                        saldoBruto = linha.c[2].v;
-                    } else {
-                        // Se vier como texto (Ex: "5000,50"), troca a vírgula por ponto para o sistema calcular certo
-                        saldoBruto = parseFloat(linha.c[2].v.toString().replace(',', '.'));
-                    }
-                }
-
-                bancoDados.push({
-                    conta: linha.c[0] ? linha.c[0].v.toString().padStart(4, '0') : index.toString().padStart(4, '0'),
-                    nome: linha.c[1] ? linha.c[1].v.toString().toUpperCase() : "SEM NOME",
-                    saldo: isNaN(saldoBruto) ? 0 : saldoBruto
-                });
-            }
-        });
-        
-        atualizarInterface();
-        document.getElementById('statusConexao').innerHTML = `<span style='color: #27ae60;'>🟢 Sucesso! ${bancoDados.length} contas atualizadas.</span>`;
-    } catch (erro) {
-        console.error(erro);
-        document.getElementById('statusConexao').innerHTML = "<span style='color: #c0392b;'>❌ Erro ao sincronizar. Verifique o compartilhamento da planilha.</span>";
-    }
-}
-
-function cadastrarManual() {
-    const nome = document.getElementById('nomeParticipante').value.trim().toUpperCase();
-    const saldo = parseFloat(document.getElementById('saldoInicial').value) || 0;
-    if (!nome) { alert("Introduza o nome."); return; }
-    
-    const proximaConta = (bancoDados.length + 1).toString().padStart(4, '0');
-    bancoDados.push({ conta: proximaConta, nome: nome, saldo: saldo });
-    
-    atualizarInterface();
-    document.getElementById('nomeParticipante').value = '';
-    document.getElementById('saldoInicial').value = '';
-}
-
-function atualizarInterface() {
-    const tabela = document.getElementById('tabelaSaldos');
-    tabela.innerHTML = '';
-    
-    if(bancoDados.length === 0) {
-        tabela.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999;">Nenhum dado encontrado.</td></tr>`;
-        return;
-    }
-
-    bancoDados.forEach(p => {
-        tabela.innerHTML += `<tr>
-            <td><code>${p.conta}</code></td>
-            <td>${p.nome}</td>
-            <td><code>1234</code></td>
-            <!-- Garante a exibição correta com R$ e duas casas decimais fixas (centavos) -->
-            <td style="font-weight:bold; color:#27ae60;">${p.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-        </tr>`;
-    });
-}
-</script>
-</body>
-</html>
+        document.getElementById('statusConexao').innerHTML = "<span style='
