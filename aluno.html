@@ -1,21 +1,60 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>Banco Zinho</title>
+    <meta charset="UTF-8">
+    <title>BANCO ZINHO - Sistema</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+        input, select, button { width: 100%; padding: 10px; margin: 5px 0; }
+        .negativo { color: red; font-weight: bold; }
+        .extrato-table { width: 100%; margin-top: 20px; border-top: 2px solid #ccc; }
+    </style>
 </head>
 <body>
-    <div id="app">
-        <h2>Banco Zinho - Login</h2>
-        <input type="text" id="conta" placeholder="Conta">
-        <input type="text" id="digito" placeholder="Digito">
-        <input type="password" id="senha" placeholder="Senha">
-        <button onclick="logar()">Entrar</button>
+    <div class="container">
+        <h2>Banco Zinho</h2>
+        <div id="loginArea">
+            <input type="text" id="conta" placeholder="Conta">
+            <input type="text" id="digito" placeholder="Dígito">
+            <input type="password" id="senha" placeholder="Senha">
+            <button onclick="logar()">Entrar</button>
+        </div>
+
+        <div id="dashboard" style="display:none;">
+            <h3>Olá, <span id="nomeUser"></span></h3>
+            <p>Saldo: R$ <span id="saldoUser"></span></p>
+            <select id="destino"></select>
+            <input type="number" id="valor" placeholder="Valor">
+            <button onclick="enviar()">Enviar Pix</button>
+
+            <h4>Extrato</h4>
+            <table class="extrato-table" id="tabelaExtrato">
+                </table>
+        </div>
     </div>
 
     <script>
+        let cliente = { nome: "Aluno Exemplo", saldo: 1000 }; // Simulação rápida
+
         function logar() {
-            alert("Botão funcionando!");
+            document.getElementById('loginArea').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('nomeUser').innerText = cliente.nome;
+            document.getElementById('saldoUser').innerText = cliente.saldo.toFixed(2);
+        }
+
+        function enviar() {
+            let v = parseFloat(document.getElementById('valor').value);
+            let d = document.getElementById('destino').value;
+            if(cliente.saldo >= v) {
+                cliente.saldo -= v;
+                document.getElementById('saldoUser').innerText = cliente.saldo.toFixed(2);
+                let tabela = document.getElementById('tabelaExtrato');
+                tabela.innerHTML += `<tr><td>Pix para ${d}</td><td class="negativo">- R$ ${v.toFixed(2)}</td></tr>`;
+            } else {
+                alert("Saldo insuficiente!");
+            }
         }
     </script>
 </body>
