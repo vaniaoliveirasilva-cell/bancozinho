@@ -5,135 +5,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BANCO ZINHO - Área do Cliente</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #eef2f7; color: #333; }
-        .container { max-width: 450px; margin: 20px auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .secao { margin-top: 20px; padding-top: 20px; border-top: 1px solid #edf2f7; }
-        .input-group { display: flex; align-items: center; margin: 10px 0; }
-        .input-group span { background: #edf2f7; padding: 12px; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; font-weight: bold; }
-        .input-group input { border-radius: 0 6px 6px 0; margin: 0; }
-        .conta-group { display: flex; gap: 8px; margin: 8px 0; }
-        .conta-group input#loginConta { flex: 3; }
-        .conta-group input#loginDigito { flex: 1; text-align: center; }
-        input, select, button { padding: 12px; margin: 8px 0; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; }
-        button { background-color: #8e44ad; color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:hover { background-color: #732d91; }
-        .saldo-box { background: linear-gradient(135deg, #2c3e50, #1a252f); color: white; padding: 20px; border-radius: 10px; margin: 15px 0; text-align: center; }
-        .saldo-val { font-size: 32px; font-weight: bold; margin-top: 5px; color: #2ecc71; }
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f7f6; }
+        .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .oculto { display: none; }
-        .status-aluno { text-align: center; font-weight: bold; font-size: 13px; color: #27ae60; margin-bottom: 15px; }
+        input, button { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; }
+        button { background: #27ae60; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .saldo-box { text-align: center; background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .saldo-val { font-size: 24px; color: #2ecc71; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div id="statusConexaoAluno" class="status-aluno">🟢 Sistema Online</div>
     <h2>🏦 BANCO ZINHO</h2>
     
     <div id="telaLogin">
-        <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Aceda introduzindo a sua conta, dígito e senha.</p>
-        <div class="conta-group">
-            <input type="text" id="loginConta" placeholder="Conta">
-            <input type="text" id="loginDigito" placeholder="Dígito">
-        </div>
-        <input type="password" id="loginSenha" placeholder="Digite sua senha">
-        <button onclick="fazerLoginAluno()" style="background-color: #27ae60;">Acessar Conta 🔐</button>
+        <input type="text" id="loginConta" placeholder="Número da Conta">
+        <input type="text" id="loginDigito" placeholder="Dígito">
+        <input type="password" id="loginSenha" placeholder="Senha">
+        <button onclick="fazerLogin()">Acessar Conta</button>
     </div>
 
     <div id="telaDashboard" class="oculto">
-        <p>Olá, <strong id="nomeClienteLogado">...</strong>! (<span id="tipoClienteLogado">...</span>)</p>
+        <p>Olá, <strong id="nomeCliente"></strong></p>
         <div class="saldo-box">
-            <div>Seu Saldo Disponível</div>
-            <div class="saldo-val" id="saldoClienteLogado">R$ 0,00</div>
+            <div>Saldo Disponível</div>
+            <div class="saldo-val" id="saldoCliente">R$ 0,00</div>
         </div>
-
-        <div class="secao">
-            <h3>Enviar Pix ⚡</h3>
-            <select id="pixDestino"><option value="">Carregando...</option></select>
-            <div class="input-group">
-                <span>R$</span>
-                <input type="number" id="pixValor" placeholder="0,00" step="0.01">
-            </div>
-            <button onclick="enviarPixAluno()">Enviar Pix Agora ⚡</button>
-        </div>
-        <button onclick="location.reload()" style="background-color: #e74c3c; margin-top: 25px;">Sair com Segurança 🚪</button>
+        <select id="pixDestino"></select>
+        <input type="number" id="pixValor" placeholder="Valor do Pix">
+        <button onclick="enviarPix()" style="background: #8e44ad;">Enviar Pix</button>
+        <button onclick="location.reload()" style="background: #e74c3c;">Sair</button>
     </div>
 </div>
 
 <script>
 let bancoDados = [];
-const idPlanilha = "1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4"; 
 let clienteLogado = null;
+const idPlanilha = "1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4"; 
+const urlScript = "https://script.google.com/macros/s/AKfycbxehEqPyZ2MkvHPIALHiC3oddM-YO1j34ctNYBXTstUS2H9dfLi25QyeASP--nDNwJgkA/exec";
 
-async function puxarDadosAluno() {
-    const urlJSON = `https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json&gid=0`;
-    try {
-        const response = await fetch(urlJSON);
-        const texto = await response.text();
-        const jsonPuro = JSON.parse(texto.substr(47).slice(0, -2));
-        bancoDados = jsonPuro.table.rows.map(linha => ({
-            contaNumero: parseInt(linha.c[0].v),
-            digito: linha.c[1].v.toString(),
-            nome: linha.c[2].v.toString().toUpperCase(),
-            senha: linha.c[4].v.toString(),
-            saldo: parseFloat(linha.c[5].v)
-        }));
-    } catch (e) { console.error(e); }
+async function carregarDados() {
+    const url = `https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json&gid=0`;
+    const res = await fetch(url);
+    const text = await res.text();
+    const json = JSON.parse(text.substr(47).slice(0, -2));
+    
+    bancoDados = json.table.rows.map(row => ({
+        conta: String(row.c[0]?.v || ""),
+        digito: String(row.c[1]?.v || ""),
+        nome: String(row.c[2]?.v || ""),
+        senha: String(row.c[4]?.v || ""),
+        saldo: parseFloat(row.c[5]?.v || 0)
+    }));
 }
 
-async function fazerLoginAluno() {
-    await puxarDadosAluno();
-    
-    // Pegamos os valores e forçamos para string, removendo espaços extras
-    const contaDig = document.getElementById('loginConta').value.trim().toString();
-    const digitoDig = document.getElementById('loginDigito').value.trim().toString();
-    const senhaDig = document.getElementById('loginSenha').value.trim().toString();
+async function fazerLogin() {
+    await carregarDados();
+    const contaInput = document.getElementById('loginConta').value.trim();
+    const digitoInput = document.getElementById('loginDigito').value.trim();
+    const senhaInput = document.getElementById('loginSenha').value.trim();
 
-    // Comparamos convertendo tudo para string para evitar erros de tipo
-    const conta = bancoDados.find(p => 
-        p.contaNumero.toString() === contaDig && 
-        p.digito.toString() === digitoDig
-    );
+    clienteLogado = bancoDados.find(p => p.conta === contaInput && p.digito === digitoInput && p.senha === senhaInput);
 
-    if (conta) {
-        if (conta.senha.toString() === senhaDig) {
-            clienteLogado = conta;
-            document.getElementById('telaLogin').classList.add('oculto');
-            document.getElementById('telaDashboard').classList.remove('oculto');
-            atualizarTelaPainel();
-        } else {
-            alert("Senha incorreta!");
-        }
+    if (clienteLogado) {
+        document.getElementById('telaLogin').classList.add('oculto');
+        document.getElementById('telaDashboard').classList.remove('oculto');
+        document.getElementById('nomeCliente').textContent = clienteLogado.nome;
+        document.getElementById('saldoCliente').textContent = clienteLogado.saldo.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        
+        const select = document.getElementById('pixDestino');
+        bancoDados.forEach(p => {
+            if (p.nome !== clienteLogado.nome) select.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
+        });
     } else {
-        alert("Conta ou Dígito não encontrados. Verifique a planilha.");
+        alert("Conta, Dígito ou Senha incorretos!");
     }
 }
-}
 
-function atualizarTelaPainel() {
-    document.getElementById('nomeClienteLogado').textContent = clienteLogado.nome;
-    document.getElementById('saldoClienteLogado').textContent = clienteLogado.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const select = document.getElementById('pixDestino');
-    select.innerHTML = '<option value="">Selecione...</option>';
-    bancoDados.forEach(p => { if(p.nome !== clienteLogado.nome) select.innerHTML += `<option value="${p.nome}">${p.nome}</option>`; });
-}
-
-async function enviarPixAluno() {
+async function enviarPix() {
     const dest = document.getElementById('pixDestino').value;
     const val = parseFloat(document.getElementById('pixValor').value);
-    const urlScript = "https://script.google.com/macros/s/AKfycbxehEqPyZ2MkvHPIALHiC3oddM-YO1j34ctNYBXTstUS2H9dfLi25QyeASP--nDNwJgkA/exec";
 
-    if (!dest || isNaN(val) || val <= 0) { alert("Selecione o destinatário e valor válido."); return; }
-    if (clienteLogado.saldo < val) { alert("Saldo Insuficiente!"); return; }
+    if (clienteLogado.saldo < val) return alert("Saldo insuficiente!");
 
-    try {
-        await fetch(urlScript, {
-            method: "POST",
-            mode: "no-cors",
-            body: JSON.stringify({ origem: clienteLogado.nome, destino: dest, valor: val })
-        });
-        alert("Pix enviado com sucesso!");
-        location.reload();
-    } catch (e) { alert("Erro ao conectar ao banco."); }
+    await fetch(urlScript, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify({ origem: clienteLogado.nome, destino: dest, valor: val })
+    });
+    alert("Pix processado!");
+    location.reload();
 }
 </script>
 </body>
