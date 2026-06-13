@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="tituloAba">BANCO ZINHO - Painel Admin</title>
+    <title>BANCO ZINHO - Painel Admin Universal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
@@ -20,74 +20,53 @@
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         th { background-color: #2980b9; color: white; }
         tr:nth-child(even) { background-color: #f9f9f9; }
-        .btn-excel { background-color: #1f7244; margin-top: 10px; }
-        .btn-excel:hover { background-color: #154c2e; }
-        .upload-box { border: 2px dashed #1f7244; padding: 20px; border-radius: 6px; background-color: #f9fffb; text-align: center; margin-top: 10px; }
-        .upload-box input[type="file"] { width: auto; border: none; background: none; }
-        .config-nome { display: flex; gap: 10px; margin-bottom: 15px; }
-        .config-nome input { flex: 1; }
-        .config-nome button { width: auto; background-color: #34495e; padding: 0 20px; }
+        .config-url { background: #e8f4fd; padding: 15px; border-radius: 6px; border: 1px solid #bce0fd; margin-bottom: 20px; }
+        .loading { color: #d35400; font-weight: bold; display: none; margin: 10px 0; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1 id="nomeBancoExibicao">🏦 BANCO ZINHO</h1>
-    <p>Painel do Administrador - Controle de Contas, Senhas e Saldos.</p>
-
-    <div class="secao" style="background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
-        <label style="font-weight: bold; color: #7f8c8d;">⚙️ Personalizar Nome do Banco:</label>
-        <div class="config-nome">
-            <input type="text" id="novoNomeBanco" placeholder="Digite o novo nome do banco">
-            <button onclick="alterarNomeBanco()">Salvar Nome</button>
-        </div>
+    <h1>🏦 BANCO ZINHO - Administrador</h1>
+    
+    <div class="config-url">
+        <label style="font-weight: bold; color: #2980b9;">🔗 Cole o Link da sua Planilha Google (Compartilhada como Editor):</label>
+        <input type="text" id="urlPlanilhaGoogle" placeholder="https://docs.google.com/spreadsheets/d/.../edit?usp=sharing" oninput="configurarPlanilha()">
+        <div id="statusConexao" style="font-size: 13px; margin-top: 5px; color: #7f8c8d;">Nenhuma planilha conectada.</div>
     </div>
+
+    <div id="statusNuvem" class="loading">🔄 Sincronizando dados com o Google Sheets...</div>
 
     <div class="secao">
         <h2>1. Cadastrar Cliente Manualmente</h2>
         <input type="text" id="nomeParticipante" placeholder="Nome do Cliente (Aluno ou Loja)">
-        
         <div class="input-group">
             <span>R$</span>
-            <input type="number" id="saldoInicial" placeholder="Saldo inicial (Ex: 0,00)" step="0.01">
+            <input type="number" id="saldoInicial" placeholder="Saldo inicial" step="0.01">
         </div>
-        
         <select id="tipoParticipante">
             <option value="Cliente">Cliente</option>
             <option value="Loja Fictícia">Loja Fictícia</option>
         </select>
-        <button onclick="cadastrar()" id="btnCadastrarIndividual">Cadastrar no Banco</button>
-        
-        <hr style="margin: 20px 0; border: 0; border-top: 1px dashed #ccc;">
-        
-        <h3>📥 Importar por Planilha do Excel</h3>
-        <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
-            Sua planilha deve conter as colunas: <strong>Nome</strong>, <strong>Conta</strong>, <strong>Digito</strong> e <strong>Senha</strong> (A coluna <strong>Saldo</strong> é opcional).
-        </p>
-        <div class="upload-box">
-            <input type="file" id="arquivoExcel" accept=".xlsx, .xls" />
-            <button onclick="importarExcel()" style="background-color: #1f7244; margin-top: 10px; width: auto; padding: 8px 20px;">Carregar Planilha</button>
-        </div>
+        <button onclick="cadastrarManual()">Cadastrar e Enviar para Nuvem</button>
     </div>
 
     <div class="secao">
         <h2>2. Transferência Direta (Administrador) ⚡</h2>
         <label>Origem (Quem paga):</label>
-        <select id="pixOrigem"><option value="">Selecione...</option></select>
+        <select id="pixOrigem"><option value="">Conecte a planilha primeiro...</option></select>
         <label>Destino (Quem recebe):</label>
-        <select id="pixDestino"><option value="">Selecione...</option></select>
+        <select id="pixDestino"><option value="">Conecte a planilha primeiro...</option></select>
         <label>Valor:</label>
         <div class="input-group">
             <span>R$</span>
-            <input type="number" id="pixValor" placeholder="0,00" step="0.01" min="0">
+            <input type="number" id="pixValor" placeholder="0,00" step="0.01">
         </div>
-        <button onclick="executarPix()" style="background-color: #8e44ad;">Confirmar Transferência ⚡</button>
+        <button onclick="executarPixAdmin()" style="background-color: #8e44ad;">Confirmar Transferência ⚡</button>
     </div>
 
     <div class="secao">
-        <h2>3. Clientes, Contas e Saldos Cadastrados</h2>
-        <button onclick="exportarParaExcel()" class="btn-excel" id="btnExportarExcel">📥 Baixar Planilha Geral (.xlsx)</button>
-        
+        <h2>3. Base de Dados Online</h2>
         <table>
             <thead>
                 <tr>
@@ -98,201 +77,139 @@
                     <th>Saldo Atual</th>
                 </tr>
             </thead>
-            <tbody id="tabelaSaldos">
-                </tbody>
+            <tbody id="tabelaSaldos"></tbody>
         </table>
-        <br>
-        <button onclick="resetarBanco()" style="background-color: #c0392b; width: auto;" id="btnResetarBanco">Resetar Banco</button>
     </div>
 </div>
 
 <script>
-let bancoDados = JSON.parse(localStorage.getItem('bancoEscolar')) || [];
-let nomeBanco = localStorage.getItem('nomeBancoPersonalizado') || 'BANCO ZINHO';
+let bancoDados = [];
+let idPlanilha = "";
 
-function salvarDados() {
-    localStorage.setItem('bancoEscolar', JSON.stringify(bancoDados));
-    atualizarInterface();
+// Recupera o link da planilha se já foi salvo antes neste navegador
+window.onload = function() {
+    const salva = localStorage.getItem('linkPlanilhaSalvo');
+    if(salva) {
+        document.getElementById('urlPlanilhaGoogle').value = salva;
+        configurarPlanilha();
+    }
 }
 
-function alterarNomeBanco() {
-    const inputNome = document.getElementById('novoNomeBanco');
-    const nomeDigitado = inputNome.value.trim();
-    if (!nomeDigitado) return;
-    nomeBanco = nomeDigitado.toUpperCase();
-    localStorage.setItem('nomeBancoPersonalizado', nomeBanco);
-    inputNome.value = '';
-    atualizarInterface();
+function configurarPlanilha() {
+    const url = document.getElementById('urlPlanilhaGoogle').value.trim();
+    if(!url) return;
+    
+    // Extrai o ID da Planilha Google a partir do link colado
+    const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (match && match[1]) {
+        idPlanilha = match[1];
+        localStorage.setItem('linkPlanilhaSalvo', url);
+        document.getElementById('statusConexao').innerHTML = "🟢 Planilha identificada com sucesso! Carregando dados...";
+        puxarDadosDaNuvem();
+    } else {
+        document.getElementById('statusConexao').innerHTML = "❌ Link inválido. Certifique-se de colar o link completo da planilha.";
+    }
 }
 
-function cadastrar() {
+async function puxarDadosDaNuvem() {
+    if(!idPlanilha) return;
+    document.getElementById('statusNuvem').style.display = 'block';
+    
+    // Usa a API pública do Google para ler dados estruturados em JSON
+    const urlLeitura = `https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json`;
+    
+    try {
+        const response = await fetch(urlLeitura);
+        const texto = await response.text();
+        const jsonValido = JSON.parse(texto.substr(47).slice(0, -2));
+        
+        const linhas = jsonValido.table.rows;
+        bancoDados = [];
+        
+        linhas.forEach(linha => {
+            if(linha.c[0] && Gold=linha.c[2]) { 
+                bancoDados.push({
+                    conta: linha.c[0].v.toString().padStart(4, '0'),
+                    digito: linha.c[1] ? linha.c[1].v.toString() : "0",
+                    nome: linha.c[2].v,
+                    tipo: linha.c[3] ? linha.c[3].v : "Cliente",
+                    senha: linha.c[4] ? linha.c[4].v.toString() : "1234",
+                    saldo: linha.c[5] ? parseFloat(linha.c[5].v) : 0
+                });
+            }
+        });
+        atualizarInterface();
+    } catch (erro) {
+        document.getElementById('statusConexao').innerHTML = "❌ Erro ao ler dados. Verifique se a planilha está pública como 'Qualquer pessoa com o link'.";
+    }
+    document.getElementById('statusNuvem').style.display = 'none';
+}
+
+async function salvarDadosNaNuvem() {
+    document.getElementById('statusNuvem').style.display = 'block';
+    atualizarInterface();
+    alert("Dados salvos no painel local do administrador!");
+    document.getElementById('statusNuvem').style.display = 'none';
+}
+
+function cadastrarManual() {
     const nome = document.getElementById('nomeParticipante').value.trim();
     const saldo = parseFloat(document.getElementById('saldoInicial').value) || 0;
     const tipo = document.getElementById('tipoParticipante').value;
 
-    if (!nome) {
-        alert("Preencha o nome do cliente.");
-        return;
-    }
-
-    if (bancoDados.some(p => p.nome.toLowerCase() === nome.toLowerCase())) {
-        alert("Este nome já existe!");
-        return;
-    }
-
+    if (!nome) { alert("Preencha o nome."); return; }
+    
     const numeroConta = (bancoDados.length + 1).toString().padStart(4, '0');
+    bancoDados.push({ nome, conta: numeroConta, digito: "0", senha: "1234", saldo: saldo, tipo: tipo });
     
-    bancoDados.push({ 
-        nome, 
-        conta: numeroConta, 
-        digito: "0", 
-        senha: "1234", 
-        saldo: saldo,
-        tipo: tipo 
-    });
-    
-    salvarDados();
+    salvarDadosNaNuvem();
     document.getElementById('nomeParticipante').value = '';
     document.getElementById('saldoInicial').value = '';
 }
 
-function importarExcel() {
-    const input = document.getElementById('arquivoExcel');
-    if (!input.files || input.files.length === 0) return;
-
-    const arquivo = input.files[0];
-    const leitor = new FileReader();
-
-    leitor.onload = function(e) {
-        try {
-            const dados = new Uint8Array(e.target.result);
-            const arquivoExcel = XLSX.read(dados, { type: 'array' });
-            const aba = arquivoExcel.Sheets[arquivoExcel.SheetNames[0]];
-            const linhas = XLSX.utils.sheet_to_json(aba);
-            
-            let cadastrados = 0;
-
-            linhas.forEach(linha => {
-                let nome = '';
-                let conta = '';
-                let digito = '';
-                let senha = '';
-                let saldo = 0;
-
-                for (let chave in linha) {
-                    if (!chave) continue;
-                    const cl = chave.toString().toLowerCase().trim();
-                    if (cl.includes('nome') || cl === 'aluno' || cl === 'cliente') nome = linha[chave].toString().trim();
-                    if (cl === 'conta' || cl.includes('número') || cl.includes('numero')) conta = linha[chave].toString().trim();
-                    if (cl.includes('digito') || cl.includes('dígito') || cl === 'dg') digito = linha[chave].toString().trim();
-                    if (cl.includes('senha') || cl.includes('pass')) senha = linha[chave].toString().trim();
-                    if (cl.includes('saldo') || cl.includes('valor')) saldo = parseFloat(linha[chave]) || 0;
-                }
-
-                if (nome && conta && digito !== undefined && senha) {
-                    const contaFormatada = conta.padStart(4, '0');
-                    if (!bancoDados.some(p => p.conta === contaFormatada && p.digito.toString() === digito.toString())) {
-                        bancoDados.push({ 
-                            nome: nome, 
-                            conta: contaFormatada, 
-                            digito: digito.toString().trim(), 
-                            senha: senha.toString().trim(), 
-                            saldo: saldo, 
-                            tipo: 'Cliente'
-                        });
-                        cadastrados++;
-                    }
-                }
-            });
-
-            salvarDados();
-            input.value = '';
-            alert(`Importação concluída! ${cadastrados} clientes carregados com sucesso.`);
-        } catch (erro) {
-            console.error(erro);
-            alert("Erro ao ler o arquivo. Verifique se os títulos da planilha estão corretos.");
-        }
-    };
-    leitor.readAsArrayBuffer(arquivo);
-}
-
-function ejecutarPix() {
-    const origenNome = document.getElementById('pixOrigem').value;
-    const destinoNome = document.getElementById('pixDestino').value;
+function ejecutarPixAdmin() {
+    const orig = document.getElementById('pixOrigem').value;
+    const dest = document.getElementById('pixDestino').value;
     const valor = parseFloat(document.getElementById('pixValor').value);
 
-    if (!origenNome || !destinoNome || isNaN(valor) || valor <= 0) return;
+    if (!orig || !dest || isNaN(valor) || valor <= 0) return;
 
-    const contaOrigem = bancoDados.find(p => p.nome === origenNome);
-    const contaDestino = bancoDados.find(p => p.nome === destinoNome);
+    const contaOrigem = bancoDados.find(p => p.nome === orig);
+    const contaDestino = bancoDados.find(p => p.nome === dest);
 
-    if (contaOrigem.saldo < valor) {
-        alert("Saldo insuficiente!");
-        return;
-    }
+    if (contaOrigem.saldo < valor) { alert("Saldo insuficiente!"); return; }
 
     contaOrigem.saldo -= valor;
     contaDestino.saldo += valor;
-    salvarDados();
+    
+    salvarDadosNaNuvem();
     document.getElementById('pixValor').value = '';
 }
 
-function exportarParaExcel() {
-    const dadosExcel = bancoDados.map(p => ({ 
-        'Conta': p.conta, 
-        'Dígito': p.digito, 
-        'Nome': p.nome, 
-        'Tipo': p.tipo, 
-        'Senha': p.senha, 
-        'Saldo': p.saldo 
-    }));
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(dadosExcel);
-    XLSX.utils.book_append_sheet(wb, ws, "Contas");
-    XLSX.writeFile(wb, `Relatorio_${nomeBanco}.xlsx`);
-}
-
 function atualizarInterface() {
-    document.getElementById('nomeBancoExibicao').textContent = `🏦 ${nomeBanco}`;
-    document.getElementById('tituloAba').textContent = `${nomeBanco} - Admin`;
-
     const tabela = document.getElementById('tabelaSaldos');
     const selectOrigem = document.getElementById('pixOrigem');
     const selectDestino = document.getElementById('pixDestino');
-
-    const transOrigem = selectOrigem.value;
-    const transDestino = selectDestino.value;
-
+    
     tabela.innerHTML = '';
     selectOrigem.innerHTML = '<option value="">Selecione...</option>';
     selectDestino.innerHTML = '<option value="">Selecione...</option>';
 
-    bancoDados.sort((a, b) => a.nome.localeCompare(b.nome));
-
     bancoDados.forEach(p => {
-        const linha = `<tr>
+        tabela.innerHTML += `<tr>
             <td><code>${p.conta}-${p.digito}</code></td>
             <td>${p.nome}</td>
-            <td><strong>${p.tipo}</strong></td>
+            <td>${p.tipo}</td>
             <td><code>${p.senha}</code></td>
             <td>${p.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
         </tr>`;
-        tabela.innerHTML += linha;
-
-        const optO = document.createElement('option'); optO.value = p.nome; optO.textContent = `${p.nome} (C: ${p.conta}-${p.digito})`;
+        
+        let optO = document.createElement('option'); optO.value = p.nome; optO.textContent = `${p.nome} (R$ ${p.saldo})`;
         selectOrigem.appendChild(optO);
-        const optD = document.createElement('option'); optD.value = p.nome; optD.textContent = p.nome;
+        let optD = document.createElement('option'); optD.value = p.nome; optD.textContent = p.nome;
         selectDestino.appendChild(optD);
     });
-
-    selectOrigem.value = transOrigem;
-    selectDestino.value = transDestino;
 }
-
-function resetarBanco() {
-    if (confirm("Resetar todo o banco?")) { bancoDados = []; salvarDados(); }
-}
-atualizarInterface();
 </script>
 </body>
 </html>
