@@ -26,16 +26,16 @@
 <body>
 
 <div class="container">
-    <div id="statusConexaoAluno" class="status-aluno">🟢 Ecossistema Conectado à Rede</div>
+    <div id="statusConexaoAluno" class="status-aluno">🟢 Conectado à Rede de Transações</div>
 
     <h2>🏦 BANCO ZINHO</h2>
     
     <div id="telaLogin">
         <div class="conta-group">
-            <input type="text" id="loginConta" placeholder="Número da Conta (Ex: 0001)">
+            <input type="text" id="loginConta" placeholder="Número da Conta (Ex: 1)">
             <input type="text" id="loginDigito" placeholder="Dg" value="0" disabled>
         </div>
-        <input type="password" id="loginSenha" placeholder="Digite sua senha da planilha">
+        <input type="password" id="loginSenha" placeholder="Digite sua senha cadastrada">
         <button onclick="fazerLoginAluno()" style="background-color: #27ae60;">Acessar Conta 🔐</button>
     </div>
 
@@ -65,38 +65,37 @@ const idPlanilha = "1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4";
 let clienteLogado = null;
 
 async function puxarDadosAluno() {
-    const urlCSV = `https://docs.google.com/spreadsheets/d/${idPlanilha}/pub?gid=0&output=csv`;
+    const urlJSON = `https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json&gid=0`;
     
     try {
-        const response = await fetch(urlCSV);
-        const textoCSV = await response.text();
-        const linhas = textoCSV.split(/\r?\n/);
+        const response = await fetch(urlJSON);
+        const texto = await response.text();
+        const jsonPuro = JSON.parse(texto.substr(47).slice(0, -2));
+        const linhas = jsonPuro.table.rows;
         
         bancoDados = [];
-        for(let i = 1; i < linhas.length; i++) {
-            if(!linhas[i]) continue;
-            const colunas = linhas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            
-            if(colunas[0] && colunas[2]) {
-                let saldoTexto = colunas[5] ? colunas[5].replace(/"/g, '').replace('R$', '').trim() : "0";
-                if(saldoTexto.includes(',') && saldoTexto.includes('.')) {
-                    saldoTexto = saldoTexto.replace(/\./g, '').replace(',', '.');
-                } else {
-                    saldoTexto = saldoTexto.replace(',', '.');
+        linhas.forEach((linha) => {
+            if (linha.c && linha.c[0] && linha.c[2]) {
+                let contaBruta = linha.c[0].v !== null ? linha.c[0].v.toString().trim() : "";
+                if (contaBruta.toLowerCase() === "conta") return;
+
+                let saldoNumero = 0;
+                if (linha.c[5] && linha.c[5].v !== null) {
+                    saldoNumero = typeof Math.abs(linha.c[5].v) === 'number' ? linha.c[5].v : parseFloat(linha.c[5].v.toString().replace(',', '.'));
                 }
-                
+
                 bancoDados.push({
-                    conta: colunas[0].replace(/"/g, '').trim().padStart(4, '0'),
-                    digito: colunas[1] ? colunas[1].replace(/"/g, '').trim() : "0",
-                    nome: colunas[2].replace(/"/g, '').trim().toUpperCase(),
-                    tipo: colunas[3] ? colunas[3].replace(/"/g, '').trim().toUpperCase() : "CLIENTE",
-                    senha: colunas[4] ? colunas[4].replace(/"/g, '').trim() : "1234",
-                    saldo: parseFloat(saldoTexto) || 0
+                    conta: contaBruta.padStart(4, '0'),
+                    digito: (linha.c[1] && linha.c[1].v !== null) ? linha.c[1].v.toString().trim() : "0",
+                    nome: (linha.c[2] && linha.c[2].v !== null) ? linha.c[2].v.toString().trim().toUpperCase() : "",
+                    tipo: (linha.c[3] && linha.c[3].v !== null) ? linha.c[3].v.toString().trim().toUpperCase() : "CLIENTE",
+                    senha: (linha.c[4] && linha.c[4].v !== null) ? linha.c[4].v.toString().trim() : "1234",
+                    saldo: isNaN(saldoNumero) ? 0 : saldoNumero
                 });
             }
-        }
+        });
         if(clienteLogado) reatualizarContaLogada();
-    } catch (e) { console.log(e); }
+    } catch (e) { console.error("Erro na leitura do Aluno:", e); }
 }
 
 async function fazerLoginAluno() {
@@ -108,7 +107,7 @@ async function fazerLoginAluno() {
     const conta = bancoDados.find(p => parseInt(p.conta, 10) === parseInt(contaDig, 10));
 
     if (!conta) { alert("Conta não encontrada!"); return; }
-    if (senhaDig !== conta.senha) { alert("Senha incorreta conforme cadastro da planilha!"); return; }
+    if (senhaDig !== conta.senha) { alert("Senha incorreta!"); return; }
 
     clienteLogado = conta;
     document.getElementById('telaLogin').classList.add('oculto');
