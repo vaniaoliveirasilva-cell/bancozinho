@@ -34,7 +34,7 @@
         <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Digite o número da sua conta e a senha cadastrada na planilha.</p>
         <div class="conta-group">
             <input type="text" id="loginConta" placeholder="Número da Conta (Ex: 1 ou 0001)">
-            <input type="text" id="loginDigito" placeholder="Dg" value="0" disabled title="Dígito padrão do sistema">
+            <input type="text" id="loginDigito" placeholder="Dg" value="0" disabled title="Dígito unificado pelo sistema">
         </div>
         <input type="password" id="loginSenha" placeholder="Digite sua senha">
         <button onclick="fazerLoginAluno()" style="background-color: #27ae60;">Acessar Conta 🔐</button>
@@ -80,50 +80,4 @@ async function puxarDadosAluno() {
         bancoDados = [];
         linhas.forEach((linha) => {
             if (linha.c && linha.c[0] && linha.c[2]) {
-                let contaBruta = linha.c[0].v !== null ? linha.c[0].v.toString().trim() : "";
-                
-                if (contaBruta.toLowerCase() === "conta") return;
-
-                let saldoNumero = 0;
-                // CORRIGIDO: alterado de line.c[5] para linha.c[5]
-                if (linha.c[5] && linha.c[5].v !== null) {
-                    saldoNumero = typeof linha.c[5].v === 'number' ? linha.c[5].v : parseFloat(linha.c[5].v.toString().replace(',', '.'));
-                }
-
-                bancoDados.push({
-                    conta: contaBruta.padStart(4, '0'),
-                    digito: (linha.c[1] && linha.c[1].v !== null) ? linha.c[1].v.toString().trim() : "0",
-                    nome: (linha.c[2] && linha.c[2].v !== null) ? linha.c[2].v.toString().trim().toUpperCase() : "",
-                    tipo: (linha.c[3] && linha.c[3].v !== null) ? linha.c[3].v.toString().trim().toUpperCase() : "CLIENTE",
-                    senha: (linha.c[4] && linha.c[4].v !== null) ? linha.c[4].v.toString().trim() : "1234",
-                    saldo: isNaN(saldoNumero) ? 0 : saldoNumero
-                });
-            }
-        });
-        
-        if(clienteLogado) reatualizarContaLogada();
-    } catch (e) { 
-        console.error("Erro na sincronização do Aluno:", e); 
-    }
-}
-
-async function fazerLoginAluno() {
-    const contaDig = document.getElementById('loginConta').value.trim();
-    const senhaDig = document.getElementById('loginSenha').value.trim();
-
-    if(!contaDig || !senhaDig) { alert("Por favor, preencha a conta e a senha."); return; }
-
-    document.getElementById('statusConexaoAluno').innerHTML = "🔄 Validando credenciais...";
-    await puxarDadosAluno();
-
-    // Encontra a conta comparando números inteiros
-    const conta = bancoDados.find(p => parseInt(p.conta, 10) === parseInt(contaDig, 10));
-
-    if (!conta) { 
-        alert("Conta não encontrada no sistema!"); 
-        document.getElementById('statusConexaoAluno').innerHTML = "🟢 Conectado à Rede de Transações";
-        return; 
-    }
-    
-    // Converte ambas para string para garantir a comparação exata da senha
-    if (senha
+                let contaBruta = linha.c[0].v !== null ? linha.
