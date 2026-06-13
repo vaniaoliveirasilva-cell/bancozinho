@@ -13,7 +13,7 @@
         .input-group input { border-radius: 0 6px 6px 0; margin: 0; }
         .conta-group { display: flex; gap: 8px; margin: 8px 0; }
         .conta-group input#loginConta { flex: 3; }
-        .conta-group input#loginDigito { flex: 1; text-align: center; background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+        .conta-group input#loginDigito { flex: 1; text-align: center; background: #ffffff; color: #333; }
         input, select, button { padding: 12px; margin: 8px 0; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; }
         button { background-color: #8e44ad; color: white; border: none; cursor: pointer; font-weight: bold; }
         button:hover { background-color: #732d91; }
@@ -31,10 +31,10 @@
     <h2>🏦 BANCO ZINHO</h2>
     
     <div id="telaLogin">
-        <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Digite o número da sua conta e a senha cadastrada na planilha.</p>
+        <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Digite o número da conta, o dígito e a sua senha.</p>
         <div class="conta-group">
-            <input type="text" id="loginConta" placeholder="Número da Conta (Ex: 1 ou 0001)">
-            <input type="text" id="loginDigito" placeholder="Dg" value="0" disabled title="Dígito unificado pelo sistema">
+            <input type="text" id="loginConta" placeholder="Conta (Ex: 1)">
+            <input type="text" id="loginDigito" placeholder="Dg" title="Digite o dígito da sua conta">
         </div>
         <input type="password" id="loginSenha" placeholder="Digite sua senha">
         <button onclick="fazerLoginAluno()" style="background-color: #27ae60;">Acessar Conta 🔐</button>
@@ -80,4 +80,8 @@ async function puxarDadosAluno() {
         bancoDados = [];
         linhas.forEach((linha) => {
             if (linha.c && linha.c[0] && linha.c[2]) {
-                let contaBruta = linha.c[0].v !== null ? linha.
+                let contaBruta = linha.c[0].v !== null ? linha.c[0].v.toString().trim() : "";
+                
+                if (contaBruta.toLowerCase() === "conta") return;
+
+                // Trata caso
