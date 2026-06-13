@@ -7,7 +7,7 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
         h1, h2 { color: #2c3e50; text-align: center; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .container { max-width: 950px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .secao { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
         input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
         button { background-color: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; }
@@ -26,29 +26,30 @@
     <h1>🏦 BANCO ZINHO - Administrador</h1>
     
     <div class="config-url">
-        <label style="font-weight: bold; color: #2980b9;">🔗 Link da Nova Planilha Ativa:</label>
+        <label style="font-weight: bold; color: #2980b9;">🔗 Link da Planilha do Ecossistema:</label>
         <input type="text" id="urlPlanilhaGoogle" value="https://docs.google.com/spreadsheets/d/1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4/edit?gid=0#gid=0" readonly style="background:#f1f5f9; color:#64748b;">
-        <div id="statusConexao" class="status-msg">🟢 Nova planilha integrada com sucesso!</div>
+        <div id="statusConexao" class="status-msg">🟢 Estrutura de 6 colunas integrada!</div>
     </div>
 
     <div class="secao">
-        <h2>1. Sincronização</h2>
+        <h2>1. Sincronização Automática</h2>
         <button onclick="puxarDadosDaNuvem()" style="background-color: #27ae60; font-size: 16px;">🔄 Ler / Atualizar Dados da Planilha</button>
     </div>
 
     <div class="secao">
-        <h2>2. Lista de Alunos Carregada</h2>
+        <h2>2. Lista de Contas Ativas</h2>
         <table>
             <thead>
                 <tr>
-                    <th>Conta</th>
-                    <th>Nome</th>
-                    <th>Senha Padrão</th>
+                    <th>Conta-Dg</th>
+                    <th>Nome do Usuário</th>
+                    <th>Tipo</th>
+                    <th>Senha Acesso</th>
                     <th>Saldo Atual</th>
                 </tr>
             </thead>
             <tbody id="tabelaSaldos">
-                <tr><td colspan="4" style="text-align:center; color:#999;">Clique no botão verde acima para carregar as informações.</td></tr>
+                <tr><td colspan="5" style="text-align:center; color:#999;">Clique no botão verde acima para ler os dados da nova estrutura.</td></tr>
             </tbody>
         </table>
     </div>
@@ -56,33 +57,35 @@
 
 <script>
 let bancoDados = [];
-// ID Atualizado para a sua nova planilha ativa
 const idPlanilha = "1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4"; 
 
 async function puxarDadosDaNuvem() {
-    document.getElementById('statusConexao').innerHTML = "🔄 Buscando dados atualizados...";
-    
-    // Puxa os dados da publicação estável em CSV da aba principal (gid=0)
+    document.getElementById('statusConexao').innerHTML = "🔄 Sincronizando com as 6 colunas da planilha...";
     const urlCSV = `https://docs.google.com/spreadsheets/d/${idPlanilha}/pub?gid=0&output=csv`;
     
     try {
         const response = await fetch(urlCSV);
         const textoCSV = await response.text();
-        
         const linhas = textoCSV.split(/\r?\n/);
         bancoDados = [];
         
         for(let i = 1; i < linhas.length; i++) {
             if(!linhas[i]) continue;
             
+            // Divide as colunas separadas por vírgula
             const colunas = linhas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             
-            if(colunas[0] && colunas[1]) {
+            // Verifica se pelo menos a conta e o nome existem nas colunas certas (A e C)
+            if(colunas[0] && colunas[2]) {
                 let contaLimpa = colunas[0].replace(/"/g, '').trim().padStart(4, '0');
-                let nomeLimpo = colunas[1].replace(/"/g, '').trim().toUpperCase();
-                let saldoTexto = colunas[2] ? colunas[2].replace(/"/g, '').replace('R$', '').trim() : "0";
+                let digitoLimpo = colunas[1] ? colunas[1].replace(/"/g, '').trim() : "0";
+                let nomeLimpo = colunas[2].replace(/"/g, '').trim().toUpperCase();
+                let tipoLimpo = colunas[3] ? colunas[3].replace(/"/g, '').trim().toUpperCase() : "CLIENTE";
+                let senhaLimpa = colunas[4] ? colunas[4].replace(/"/g, '').trim() : "1234";
                 
-                // Conversor de moedas e decimais brasileiro
+                // Pega o saldo lá na 6ª coluna (Índice 5 da lista)
+                let saldoTexto = colunas[5] ? colunas[5].replace(/"/g, '').replace('R$', '').trim() : "0";
+                
                 if(saldoTexto.includes(',') && saldoTexto.includes('.')) {
                     saldoTexto = saldoTexto.replace(/\./g, '').replace(',', '.');
                 } else {
@@ -93,17 +96,20 @@ async function puxarDadosDaNuvem() {
 
                 bancoDados.push({
                     conta: contaLimpa,
+                    digito: digitoLimpo,
                     nome: nomeLimpo,
+                    tipo: tipoLimpo,
+                    senha: senhaLimpa,
                     saldo: saldoNumero
                 });
             }
         }
         
         atualizarInterface();
-        document.getElementById('statusConexao').innerHTML = `🟢 Sucesso! ${bancoDados.length} contas carregadas da nova planilha.`;
+        document.getElementById('statusConexao').innerHTML = `🟢 Sucesso! ${bancoDados.length} contas carregadas com saldos reais.`;
     } catch (erro) {
         console.error(erro);
-        document.getElementById('statusConexao').innerHTML = "<span style='color: #c0392b;'>❌ Certifique-se de que foi em: Arquivo > Compartilhar > Publicar na Web (como CSV) nesta nova planilha!</span>";
+        document.getElementById('statusConexao').innerHTML = "<span style='color: #c0392b;'>❌ Erro. Certifique-se de que a planilha foi 'Publicada na Web' como CSV!</span>";
     }
 }
 
@@ -112,9 +118,10 @@ function atualizarInterface() {
     tabela.innerHTML = '';
     bancoDados.forEach(p => {
         tabela.innerHTML += `<tr>
-            <td><code>${p.conta}</code></td>
+            <td><code>${p.conta}-${p.digito}</code></td>
             <td>${p.nome}</td>
-            <td><code>1234</code></td>
+            <td><small>${p.tipo}</small></td>
+            <td><code>${p.senha}</code></td>
             <td style="font-weight:bold; color:#27ae60;">${p.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
         </tr>`;
     });
