@@ -183,18 +183,66 @@ function atualizarTelaPainel() {
         }
     });
 }
+async function enviarPixAluno() {
 
-function enviarPixAluno() {
     const dest = document.getElementById('pixDestino').value;
     const val = parseFloat(document.getElementById('pixValor').value);
 
-    if (!dest || isNaN(val) || val <= 0) { alert("Selecione o destinatário e digite um valor válido."); return; }
-    if (clienteLogado.saldo < val) { alert("Saldo Insuficiente!"); return; }
+    if (!dest || isNaN(val) || val <= 0) {
+        alert("Selecione o destinatário e digite um valor válido.");
+        return;
+    }
 
-    const contaDestino = bancoDados.find(p => p.nome === dest);
-    
-    clienteLogado.saldo -= val;
-    contaDestino.saldo += val;
+    if (clienteLogado.saldo < val) {
+        alert("Saldo insuficiente!");
+        return;
+    }
+
+    const contaDestino = bancoDados.find(
+        p => p.nome === dest
+    );
+
+    try {
+
+        const resposta = await fetch(
+            "https://script.google.com/macros/s/AKfycbzIul8leDgPsuNRNpZTLw9qYU2ozMPQM5tgES13b8RmFKgNJwuG_jTncbdAybKRJGTYkg/exec",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    origem: clienteLogado.contaNumero,
+                    destino: contaDestino.contaNumero,
+                    valor: val
+                })
+            }
+        );
+
+        const resultado = await resposta.json();
+
+        if (resultado.sucesso) {
+
+            alert("✅ PIX realizado com sucesso!");
+
+            document.getElementById('pixValor').value = '';
+
+            await puxarDadosAluno();
+
+            atualizarTelaPainel();
+
+        } else {
+
+            alert("❌ " + resultado.mensagem);
+        }
+
+    } catch (erro) {
+
+        console.error(erro);
+
+        alert("Erro ao comunicar com a Central.");
+    }
+}
 
     document.getElementById('pixValor').value = '';
     atualizarTelaPainel();
