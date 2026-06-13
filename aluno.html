@@ -2,11 +2,91 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Teste Banco Zinho</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BANCO ZINHO - Área do Cliente</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #eef2f7; color: #333; }
+        .container { max-width: 450px; margin: 20px auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .secao { margin-top: 20px; padding-top: 20px; border-top: 1px solid #edf2f7; }
+        .oculto { display: none; }
+        .tabela-extrato { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        .tabela-extrato th, .tabela-extrato td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
+        .negativo { color: red; font-weight: bold; }
+        .positivo { color: blue; font-weight: bold; }
+        input, select, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        button { background-color: #8e44ad; color: white; cursor: pointer; font-weight: bold; }
+    </style>
 </head>
-<body style="padding: 50px; font-family: sans-serif; text-align: center;">
-    <h1>O sistema está a carregar...</h1>
-    <p>Se você consegue ler isto, o problema não é o servidor do GitHub.</p>
-    <button onclick="alert('Funciona!')">Clique para testar o JavaScript</button>
+<body>
+<div class="container">
+    <div id="telaLogin">
+        <h2>🏦 BANCO ZINHO</h2>
+        <input type="text" id="loginConta" placeholder="Conta">
+        <input type="text" id="loginDigito" placeholder="Dígito">
+        <input type="password" id="loginSenha" placeholder="Senha">
+        <button onclick="fazerLoginAluno()">Acessar Conta 🔐</button>
+    </div>
+
+    <div id="telaDashboard" class="oculto">
+        <h3>Olá, <span id="nomeClienteLogado"></span></h3>
+        <div style="font-size: 24px; font-weight: bold; color: #2ecc71;">R$ <span id="saldoClienteLogado">0,00</span></div>
+        
+        <div class="secao">
+            <select id="pixDestino"></select>
+            <input type="number" id="pixValor" placeholder="Valor do Pix">
+            <button onclick="enviarPixAluno()">Enviar Pix ⚡</button>
+        </div>
+
+        <div class="secao">
+            <h4>📜 Extrato</h4>
+            <table class="tabela-extrato">
+                <thead><tr><th>Descrição</th><th>Valor</th></tr></thead>
+                <tbody id="listaExtrato"></tbody>
+            </table>
+        </div>
+        <button onclick="location.reload()" style="background-color: #e74c3c;">Sair 🚪</button>
+    </div>
+</div>
+
+<script>
+    let bancoDados = [], clienteLogado = null;
+    const idPlanilha = "1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4";
+
+    async function puxarDados() {
+        const res = await fetch(`https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json`);
+        const texto = await res.text();
+        const json = JSON.parse(texto.substr(47).slice(0, -2));
+        bancoDados = json.table.rows.map(r => ({
+            conta: r.c[0].v.toString(), digito: r.c[1].v.toString(), nome: r.c[2].v, senha: r.c[4].v.toString(), saldo: parseFloat(r.c[5].v)
+        }));
+    }
+
+    async function fazerLoginAluno() {
+        await puxarDados();
+        const c = document.getElementById('loginConta').value;
+        const d = document.getElementById('loginDigito').value;
+        const s = document.getElementById('loginSenha').value;
+        clienteLogado = bancoDados.find(p => p.conta === c && p.digito === d && p.senha === s);
+        if (clienteLogado) {
+            document.getElementById('telaLogin').classList.add('oculto');
+            document.getElementById('telaDashboard').classList.remove('oculto');
+            document.getElementById('nomeClienteLogado').innerText = clienteLogado.nome;
+            document.getElementById('saldoClienteLogado').innerText = clienteLogado.saldo.toFixed(2);
+            let sel = document.getElementById('pixDestino');
+            bancoDados.forEach(p => { if(p.nome !== clienteLogado.nome) sel.innerHTML += `<option value="${p.nome}">${p.nome}</option>`; });
+        } else alert("Dados incorretos!");
+    }
+
+    function enviarPixAluno() {
+        const dest = document.getElementById('pixDestino').value;
+        const val = parseFloat(document.getElementById('pixValor').value);
+        if (clienteLogado.saldo >= val) {
+            clienteLogado.saldo -= val;
+            document.getElementById('saldoClienteLogado').innerText = clienteLogado.saldo.toFixed(2);
+            document.getElementById('listaExtrato').innerHTML += `<tr><td>Para: ${dest}</td><td class="negativo">- R$ ${val.toFixed(2)}</td></tr>`;
+            alert("Pix enviado!");
+        } else alert("Saldo insuficiente!");
+    }
+</script>
 </body>
 </html>
