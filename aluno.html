@@ -3,23 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BANCO ZINHO - Área do Cliente</title>
+    <title>BANCO ZINHO - Acesso</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; background-color: #f4f7f6; }
-        .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        body { font-family: Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .container { width: 100%; max-width: 400px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        button { background: #6c5ce7; color: white; border: none; font-weight: bold; cursor: pointer; }
         .oculto { display: none; }
-        input, button { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; }
-        button { background: #27ae60; color: white; border: none; cursor: pointer; font-weight: bold; }
-        .saldo-box { text-align: center; background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin: 15px 0; }
-        .saldo-val { font-size: 24px; color: #2ecc71; }
+        .saldo { text-align: center; font-size: 24px; font-weight: bold; color: #2d3436; margin: 20px 0; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🏦 BANCO ZINHO</h2>
-    
     <div id="telaLogin">
+        <h2>Login - BANCO ZINHO</h2>
         <input type="text" id="loginConta" placeholder="Número da Conta">
         <input type="text" id="loginDigito" placeholder="Dígito">
         <input type="password" id="loginSenha" placeholder="Senha">
@@ -27,22 +25,19 @@
     </div>
 
     <div id="telaDashboard" class="oculto">
-        <p>Olá, <strong id="nomeCliente"></strong></p>
-        <div class="saldo-box">
-            <div>Saldo Disponível</div>
-            <div class="saldo-val" id="saldoCliente">R$ 0,00</div>
-        </div>
+        <h3>Olá, <span id="nomeCliente"></span></h3>
+        <div class="saldo" id="saldoCliente">R$ 0,00</div>
         <select id="pixDestino"></select>
-        <input type="number" id="pixValor" placeholder="Valor do Pix">
-        <button onclick="enviarPix()" style="background: #8e44ad;">Enviar Pix</button>
-        <button onclick="location.reload()" style="background: #e74c3c;">Sair</button>
+        <input type="number" id="pixValor" placeholder="Valor (R$)">
+        <button onclick="enviarPix()" style="background: #00b894;">Enviar Pix</button>
+        <button onclick="location.reload()" style="background: #d63031;">Sair</button>
     </div>
 </div>
 
 <script>
 let bancoDados = [];
 let clienteLogado = null;
-const idPlanilha = "1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4"; 
+const idPlanilha = "1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4";
 const urlScript = "https://script.google.com/macros/s/AKfycbxehEqPyZ2MkvHPIALHiC3oddM-YO1j34ctNYBXTstUS2H9dfLi25QyeASP--nDNwJgkA/exec";
 
 async function carregarDados() {
@@ -52,21 +47,21 @@ async function carregarDados() {
     const json = JSON.parse(text.substr(47).slice(0, -2));
     
     bancoDados = json.table.rows.map(row => ({
-        conta: String(row.c[0]?.v || ""),
-        digito: String(row.c[1]?.v || ""),
-        nome: String(row.c[2]?.v || ""),
-        senha: String(row.c[4]?.v || ""),
+        conta: String(row.c[0]?.v || "").trim(),
+        digito: String(row.c[1]?.v || "").trim(),
+        nome: String(row.c[2]?.v || "").trim(),
+        senha: String(row.c[4]?.v || "").trim(),
         saldo: parseFloat(row.c[5]?.v || 0)
     }));
 }
 
 async function fazerLogin() {
     await carregarDados();
-    const contaInput = document.getElementById('loginConta').value.trim();
-    const digitoInput = document.getElementById('loginDigito').value.trim();
-    const senhaInput = document.getElementById('loginSenha').value.trim();
+    const c = document.getElementById('loginConta').value.trim();
+    const d = document.getElementById('loginDigito').value.trim();
+    const s = document.getElementById('loginSenha').value.trim();
 
-    clienteLogado = bancoDados.find(p => p.conta === contaInput && p.digito === digitoInput && p.senha === senhaInput);
+    clienteLogado = bancoDados.find(p => p.conta === c && p.digito === d && p.senha === s);
 
     if (clienteLogado) {
         document.getElementById('telaLogin').classList.add('oculto');
@@ -74,12 +69,12 @@ async function fazerLogin() {
         document.getElementById('nomeCliente').textContent = clienteLogado.nome;
         document.getElementById('saldoCliente').textContent = clienteLogado.saldo.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
         
-        const select = document.getElementById('pixDestino');
+        const sel = document.getElementById('pixDestino');
         bancoDados.forEach(p => {
-            if (p.nome !== clienteLogado.nome) select.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
+            if(p.nome !== clienteLogado.nome) sel.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
         });
     } else {
-        alert("Conta, Dígito ou Senha incorretos!");
+        alert("Dados incorretos! Verifique a Conta, Dígito ou Senha.");
     }
 }
 
@@ -87,15 +82,18 @@ async function enviarPix() {
     const dest = document.getElementById('pixDestino').value;
     const val = parseFloat(document.getElementById('pixValor').value);
 
-    if (clienteLogado.saldo < val) return alert("Saldo insuficiente!");
+    if (!val || val <= 0) return alert("Valor inválido");
+    if (clienteLogado.saldo < val) return alert("Saldo insuficiente");
 
-    await fetch(urlScript, {
-        method: "POST",
-        mode: "no-cors",
-        body: JSON.stringify({ origem: clienteLogado.nome, destino: dest, valor: val })
-    });
-    alert("Pix processado!");
-    location.reload();
+    try {
+        await fetch(urlScript, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify({ origem: clienteLogado.nome, destino: dest, valor: val })
+        });
+        alert("Pix enviado com sucesso!");
+        location.reload();
+    } catch(e) { alert("Erro de conexão com o Banco."); }
 }
 </script>
 </body>
