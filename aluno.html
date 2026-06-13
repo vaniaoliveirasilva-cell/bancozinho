@@ -82,13 +82,31 @@ async function puxarDadosAluno() {
 
 async function fazerLoginAluno() {
     await puxarDadosAluno();
-    const conta = bancoDados.find(p => p.contaNumero == document.getElementById('loginConta').value && p.digito == document.getElementById('loginDigito').value);
-    if (conta && conta.senha == document.getElementById('loginSenha').value) {
-        clienteLogado = conta;
-        document.getElementById('telaLogin').classList.add('oculto');
-        document.getElementById('telaDashboard').classList.remove('oculto');
-        atualizarTelaPainel();
-    } else alert("Dados incorretos!");
+    
+    // Pegamos os valores e forçamos para string, removendo espaços extras
+    const contaDig = document.getElementById('loginConta').value.trim().toString();
+    const digitoDig = document.getElementById('loginDigito').value.trim().toString();
+    const senhaDig = document.getElementById('loginSenha').value.trim().toString();
+
+    // Comparamos convertendo tudo para string para evitar erros de tipo
+    const conta = bancoDados.find(p => 
+        p.contaNumero.toString() === contaDig && 
+        p.digito.toString() === digitoDig
+    );
+
+    if (conta) {
+        if (conta.senha.toString() === senhaDig) {
+            clienteLogado = conta;
+            document.getElementById('telaLogin').classList.add('oculto');
+            document.getElementById('telaDashboard').classList.remove('oculto');
+            atualizarTelaPainel();
+        } else {
+            alert("Senha incorreta!");
+        }
+    } else {
+        alert("Conta ou Dígito não encontrados. Verifique a planilha.");
+    }
+}
 }
 
 function atualizarTelaPainel() {
