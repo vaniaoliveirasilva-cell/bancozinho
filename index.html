@@ -4,16 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BANCO ZINHO - Painel Admin Universal</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
-        h1, h2, h3 { color: #2c3e50; }
+        h1, h2 { color: #2c3e50; text-align: center; }
         .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .secao { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
         .input-group { display: flex; align-items: center; margin: 5px 0; }
         .input-group span { background: #eee; padding: 10px; border: 1px solid #ccc; border-right: none; border-radius: 4px 0 0 4px; font-weight: bold; }
         .input-group input { border-radius: 0 4px 4px 0; margin: 0; }
-        input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
         button { background-color: #27ae60; color: white; border: none; cursor: pointer; font-weight: bold; }
         button:hover { background-color: #219653; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
@@ -21,7 +20,7 @@
         th { background-color: #2980b9; color: white; }
         tr:nth-child(even) { background-color: #f9f9f9; }
         .config-url { background: #e8f4fd; padding: 15px; border-radius: 6px; border: 1px solid #bce0fd; margin-bottom: 20px; }
-        .loading { color: #d35400; font-weight: bold; display: none; margin: 10px 0; }
+        .status-msg { font-weight: bold; margin-top: 5px; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -30,12 +29,10 @@
     <h1>🏦 BANCO ZINHO - Administrador</h1>
     
     <div class="config-url">
-        <label style="font-weight: bold; color: #2980b9;">🔗 Cole o Link da sua Planilha Google (Compartilhada como Editor):</label>
-        <input type="text" id="urlPlanilhaGoogle" placeholder="https://docs.google.com/spreadsheets/d/.../edit?usp=sharing" oninput="configurarPlanilha()">
-        <div id="statusConexao" style="font-size: 13px; margin-top: 5px; color: #7f8c8d;">Nenhuma planilha conectada.</div>
+        <label style="font-weight: bold; color: #2980b9;">🔗 Cole o Link de Partilha da sua Planilha Google:</label>
+        <input type="text" id="urlPlanilhaGoogle" placeholder="Cole o link aqui..." oninput="conectar()">
+        <div id="statusConexao" class="status-msg" style="color: #7f8c8d;">A aguardar link...</div>
     </div>
-
-    <div id="statusNuvem" class="loading">🔄 Sincronizando dados com o Google Sheets...</div>
 
     <div class="secao">
         <h2>1. Cadastrar Cliente Manualmente</h2>
@@ -48,25 +45,12 @@
             <option value="Cliente">Cliente</option>
             <option value="Loja Fictícia">Loja Fictícia</option>
         </select>
-        <button onclick="cadastrarManual()">Cadastrar e Enviar para Nuvem</button>
+        <button onclick="cadastrarManual()">Cadastrar no Painel</button>
     </div>
 
     <div class="secao">
-        <h2>2. Transferência Direta (Administrador) ⚡</h2>
-        <label>Origem (Quem paga):</label>
-        <select id="pixOrigem"><option value="">Conecte a planilha primeiro...</option></select>
-        <label>Destino (Quem recebe):</label>
-        <select id="pixDestino"><option value="">Conecte a planilha primeiro...</option></select>
-        <label>Valor:</label>
-        <div class="input-group">
-            <span>R$</span>
-            <input type="number" id="pixValor" placeholder="0,00" step="0.01">
-        </div>
-        <button onclick="executarPixAdmin()" style="background-color: #8e44ad;">Confirmar Transferência ⚡</button>
-    </div>
-
-    <div class="secao">
-        <h2>3. Base de Dados Online</h2>
+        <h2>2. Base de Dados Online (Saldos)</h2>
+        <button onclick="puxarDadosDaNuvem()" style="background-color: #3498db; margin-bottom: 10px;">🔄 Forçar Atualização / Ler Planilha</button>
         <table>
             <thead>
                 <tr>
@@ -84,130 +68,87 @@
 
 <script>
 let bancoDados = [];
-let idPlanilha = "";
+let idPlanilha = "1sBU9OoOwdLme1bYyVNsfyhLi10tZ1wDQ33GVkwA9BKs"; // Já deixei o ID da sua planilha direto aqui!
 
-// Recupera o link da planilha se já foi salvo antes neste navegador
 window.onload = function() {
-    const salva = localStorage.getItem('linkPlanilhaSalvo');
-    if(salva) {
-        document.getElementById('urlPlanilhaGoogle').value = salva;
-        configurarPlanilha();
-    }
+    document.getElementById('urlPlanilhaGoogle').value = "https://docs.google.com/spreadsheets/d/" + idPlanilha + "/edit";
+    conectar();
 }
 
-function configurarPlanilha() {
+function conectar() {
     const url = document.getElementById('urlPlanilhaGoogle').value.trim();
-    if(!url) return;
-    
-    // Extrai o ID da Planilha Google a partir do link colado
     const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
     if (match && match[1]) {
         idPlanilha = match[1];
-        localStorage.setItem('linkPlanilhaSalvo', url);
-        document.getElementById('statusConexao').innerHTML = "🟢 Planilha identificada com sucesso! Carregando dados...";
+        document.getElementById('statusConexao').innerHTML = "🟢 Conectado à planilha! Clique no botão azul abaixo para carregar.";
         puxarDadosDaNuvem();
     } else {
-        document.getElementById('statusConexao').innerHTML = "❌ Link inválido. Certifique-se de colar o link completo da planilha.";
+        document.getElementById('statusConexao').innerHTML = "❌ Link inválido.";
     }
 }
 
 async function puxarDadosDaNuvem() {
     if(!idPlanilha) return;
-    document.getElementById('statusNuvem').style.display = 'block';
+    document.getElementById('statusConexao').innerHTML = "🔄 A ler dados da planilha...";
     
-    // Usa a API pública do Google para ler dados estruturados em JSON
-    const urlLeitura = `https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json`;
+    // Formato de leitura alternativo e infalível para o Google Sheets público
+    const urlLeitura = `https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json&sheet=珍`;
     
     try {
-        const response = await fetch(urlLeitura);
+        const response = await fetch(`https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json`);
         const texto = await response.text();
         const jsonValido = JSON.parse(texto.substr(47).slice(0, -2));
         
         const linhas = jsonValido.table.rows;
         bancoDados = [];
         
-        linhas.forEach(linha => {
-            if(linha.c[0] && Gold=linha.c[2]) { 
+        linhas.forEach((linha, index) => {
+            if(index === 0) return; // Pula a linha de títulos
+            if(linha.c && linha.c[0] && linha.c[1]) {
                 bancoDados.push({
-                    conta: linha.c[0].v.toString().padStart(4, '0'),
-                    digito: linha.c[1] ? linha.c[1].v.toString() : "0",
-                    nome: linha.c[2].v,
-                    tipo: linha.c[3] ? linha.c[3].v : "Cliente",
-                    senha: linha.c[4] ? linha.c[4].v.toString() : "1234",
-                    saldo: linha.c[5] ? parseFloat(linha.c[5].v) : 0
+                    conta: linha.c[0] ? linha.c[0].v.toString().padStart(4, '0') : (index).toString().padStart(4, '0'),
+                    nome: linha.c[1] ? linha.c[1].v : "Sem nome",
+                    saldo: linha.c[2] ? parseFloat(linha.c[2].v) : 0,
+                    digito: "0",
+                    tipo: "Cliente",
+                    senha: "1234"
                 });
             }
         });
+        
         atualizarInterface();
+        document.getElementById('statusConexao').innerHTML = "🟢 Dados carregados com sucesso!";
     } catch (erro) {
-        document.getElementById('statusConexao').innerHTML = "❌ Erro ao ler dados. Verifique se a planilha está pública como 'Qualquer pessoa com o link'.";
+        console.error(erro);
+        document.getElementById('statusConexao').innerHTML = "❌ Erro ao ler. Certifique-se de que a planilha está em 'Qualquer pessoa com o link' como Editor.";
     }
-    document.getElementById('statusNuvem').style.display = 'none';
-}
-
-async function salvarDadosNaNuvem() {
-    document.getElementById('statusNuvem').style.display = 'block';
-    atualizarInterface();
-    alert("Dados salvos no painel local do administrador!");
-    document.getElementById('statusNuvem').style.display = 'none';
 }
 
 function cadastrarManual() {
-    const nome = document.getElementById('nomeParticipante').value.trim();
+    const nome = document.getElementById('nomeParticipante').value.trim().toUpperCase();
     const saldo = parseFloat(document.getElementById('saldoInicial').value) || 0;
-    const tipo = document.getElementById('tipoParticipante').value;
-
-    if (!nome) { alert("Preencha o nome."); return; }
+    if (!nome) { alert("Digite o nome."); return; }
     
     const numeroConta = (bancoDados.length + 1).toString().padStart(4, '0');
-    bancoDados.push({ nome, conta: numeroConta, digito: "0", senha: "1234", saldo: saldo, tipo: tipo });
+    bancoDados.push({ nome, conta: numeroConta, digito: "0", senha: "1234", saldo: saldo, tipo: "Cliente" });
     
-    salvarDadosNaNuvem();
+    atualizarInterface();
     document.getElementById('nomeParticipante').value = '';
     document.getElementById('saldoInicial').value = '';
-}
-
-function ejecutarPixAdmin() {
-    const orig = document.getElementById('pixOrigem').value;
-    const dest = document.getElementById('pixDestino').value;
-    const valor = parseFloat(document.getElementById('pixValor').value);
-
-    if (!orig || !dest || isNaN(valor) || valor <= 0) return;
-
-    const contaOrigem = bancoDados.find(p => p.nome === orig);
-    const contaDestino = bancoDados.find(p => p.nome === dest);
-
-    if (contaOrigem.saldo < valor) { alert("Saldo insuficiente!"); return; }
-
-    contaOrigem.saldo -= valor;
-    contaDestino.saldo += valor;
-    
-    salvarDadosNaNuvem();
-    document.getElementById('pixValor').value = '';
+    alert("Adicionado ao painel! (Para salvar de volta na planilha do Google, digite diretamente no Sheets e clique em Atualizar aqui).");
 }
 
 function atualizarInterface() {
     const tabela = document.getElementById('tabelaSaldos');
-    const selectOrigem = document.getElementById('pixOrigem');
-    const selectDestino = document.getElementById('pixDestino');
-    
     tabela.innerHTML = '';
-    selectOrigem.innerHTML = '<option value="">Selecione...</option>';
-    selectDestino.innerHTML = '<option value="">Selecione...</option>';
-
     bancoDados.forEach(p => {
         tabela.innerHTML += `<tr>
-            <td><code>${p.conta}-${p.digito}</code></td>
+            <td><code>${p.conta}</code></td>
             <td>${p.nome}</td>
             <td>${p.tipo}</td>
             <td><code>${p.senha}</code></td>
             <td>${p.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
         </tr>`;
-        
-        let optO = document.createElement('option'); optO.value = p.nome; optO.textContent = `${p.nome} (R$ ${p.saldo})`;
-        selectOrigem.appendChild(optO);
-        let optD = document.createElement('option'); optD.value = p.nome; optD.textContent = p.nome;
-        selectDestino.appendChild(optD);
     });
 }
 </script>
