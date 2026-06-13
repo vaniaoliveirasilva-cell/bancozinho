@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="tituloAba">Área do Cliente</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #eef2f7; color: #333; }
+        h1, h2 { color: #2c3e50; text-align: center; }
+        .container { max-width: 450px; margin: 40px auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .secao { margin-top: 20px; padding-top: 20px; border-top: 1px solid #edf2f7; }
+        .input-group { display: flex; align-items: center; margin: 10px 0; }
+        .input-group span { background: #edf2f7; padding: 12px; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; font-weight: bold; }
+        .input-group input { border-radius: 0 6px 6px 0; margin: 0; }
+        
+        .conta-group { display: flex; gap: 8px; margin: 8px 0; }
+        .conta-group input#loginConta { flex: 3; }
+        .conta-group input#loginDigito { flex: 1; text-align: center; }
+
+        input, select, button { padding: 12px; margin: 8px 0; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; }
+        button { background-color: #8e44ad; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #732d91; }
+        .saldo-box { background: linear-gradient(135deg, #2c3e50, #1a252f); color: white; padding: 20px; border-radius: 10px; margin: 15px 0; text-align: center; }
+        .saldo-val { font-size: 32px; font-weight: bold; margin-top: 5px; color: #2ecc71; }
+        .logout-btn { background-color: #e74c3c; margin: 15px auto 0 auto; font-size: 13px; padding: 8px; width: auto; display: block; }
+        .welcome-text { font-size: 15px; color: #64748b; text-align: center; }
+        .oculto { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="nomeBancoExibicao">🏦 BANCO ZINHO</h1>
+    
+    <div id="telaLogin">
+        <p class="welcome-text">Acesse sua conta usando suas credenciais bancárias.</p>
+        
+        <div class="conta-group">
+            <input type="text" id="loginConta" placeholder="Número da Conta (Ex: 0001)">
+            <input type="text" id="loginDigito" placeholder="Dg" maxlength="2">
+        </div>
+        
+        <input type="password" id="loginSenha" placeholder="Sua senha eletrônica">
+        <button onclick="fazerLogin()" style="background-color: #27ae60;">Acessar Conta Segura 🔐</button>
+    </div>
+
+    <div id="telaDashboard" class="oculto">
+        <p class="welcome-text">Olá, <strong id="nomeClienteLogado">Cliente</strong>! (Conta: <span id="infoContaCliente"></span>)</p>
+        
+        <div class="saldo-box">
+            <div>Seu Saldo Disponível</div>
+            <div class="saldo-val" id="saldoClienteLogado">R$ 0,00</div>
+        </div>
+
+        <div class="secao">
+            <h2>Enviar um Pix ⚡</h2>
+            <select id="pixDestino"><option value="">Selecione quem vai receber...</option></select>
+            <div class="input-group">
+                <span>R$</span>
+                <input type="number" id="pixValor" placeholder="0,00" step="0.01" min="0.01">
+            </div>
+            <button onclick="enviarPixCliente()">Confirmar Pix ⚡</button>
+        </div>
+        
+        <button onclick="fazerLogout()" class="logout-btn">Sair com Segurança 🚪</button>
+    </div>
+</div>
+
+<script>
+let bancoDados = JSON.parse(localStorage.getItem('bancoEscolar')) || [];
+let nomeBanco = localStorage.getItem('nomeBancoPersonalizado') || 'BANCO ZINHO';
+let clienteLogado = null;
+
+function atualizarNomesBanco() {
+    document.getElementById('nomeBancoExibicao').textContent = `🏦 ${nomeBanco}`;
+    document.getElementById('tituloAba').textContent = `Acesso Cliente - ${nomeBanco}`;
+}
+
+function fazerLogin() {
+    const contaDigitada = document.getElementById('loginConta').value.trim();
+    const digitoDigitado = document.getElementById('loginDigito').value.trim().toLowerCase();
+    const senhaDigitada = document.getElementById('loginSenha').value.trim();
+    
+    bancoDados = JSON.parse(localStorage.getItem('bancoEscolar')) || [];
+
+    if (!contaDigitada || !digitoDigitado || !senhaDigitada) {
+        alert("Por favor, preencha todos os campos do login.");
+        return;
+    }
+
+    const conta = bancoDados.find(p => {
+        const contaBancoNormalizada = parseInt(p.conta, 10);
+        const contaDigitadaNormalizada = parseInt(contaDigitada, 10);
+        const digitoBancoNormalizado = p.digito.toString().trim().toLowerCase();
+
+        return contaBancoNormalizada === contaDigitadaNormalizada && digitoBancoNormalizado === digitoDigitado;
+    });
+
+    if (!conta) {
+        alert("Dados bancários incorretos! Conta ou dígito não encontrados.");
+        return;
+    }
+
+    if (conta.senha.toString().trim() !== senhaDigitada) {
+        alert("Senha incorreta! Tente novamente.");
+        return;
+    }
+
+    clienteLogado = conta;
+    document.getElementById('telaLogin').classList.add('oculto');
+    document.getElementById('telaDashboard').classList.remove('oculto');
+    carregarPainelCliente();
+}
+
+function carregarPainelCliente() {
+    bancoDados = JSON.parse(localStorage.getItem('bancoEscolar')) || [];
+    const contaAtualizada = bancoDados.find(p => p.conta === clienteLogado.conta && p.digito === clienteLogado.digito);
+    if(contaAtualizada) clienteLogado = contaAtualizada;
+
+    document.getElementById('nomeClienteLogado').textContent = clienteLogado.nome;
+    document.getElementById('infoContaCliente').textContent = `${clienteLogado.conta}-${clienteLogado.digito}`;
+    document.getElementById('saldoClienteLogado').textContent = clienteLogado.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    const selectDestino = document.getElementById('pixDestino');
+    selectDestino.innerHTML = '<option value="">Selecione quem vai receber...</option>';
+    
+    bancoDados.sort((a, b) => a.nome.localeCompare(b.nome));
+    bancoDados.forEach(p => {
+        if (p.conta !== clienteLogado.conta || p.digito !== clienteLogado.digito) {
+            const opt = document.createElement('option');
+            opt.value = p.nome;
+            opt.textContent = `${p.nome} (Conta: ${p.conta}-${p.digito})`;
+            selectDestino.appendChild(opt);
+        }
+    });
+}
+
+function enviarPixCliente() {
+    const destinoNome = document.getElementById('pixDestino').value;
+    const valor = parseFloat(document.getElementById('pixValor').value);
+
+    if (!destinoNome || isNaN(valor) || valor <= 0) {
+        alert("Preencha o valor corretamente.");
+        return;
+    }
+
+    bancoDados = JSON.parse(localStorage.getItem('bancoEscolar')) || [];
+    const contaOrigem = bancoDados.find(p => p.conta === clienteLogado.conta && p.digito === clienteLogado.digito);
+    const contaDestino = bancoDados.find(p => p.nome === destinoNome);
+
+    if (contaOrigem.saldo < valor) {
+        alert("Saldo insuficiente para esta transação!");
+        return;
+    }
+
+    contaOrigem.saldo -= valor;
+    contaDestino.saldo += valor;
+
+    localStorage.setItem('bancoEscolar', JSON.stringify(bancoDados));
+    document.getElementById('pixValor').value = '';
+    carregarPainelCliente();
+    alert("⚡ Pix enviado com sucesso!");
+}
+
+function fazerLogout() {
+    clienteLogado = null;
+    document.getElementById('loginConta').value = '';
+    document.getElementById('loginDigito').value = '';
+    document.getElementById('loginSenha').value = '';
+    document.getElementById('telaDashboard').classList.add('oculto');
+    document.getElementById('telaLogin').classList.remove('oculto');
+}
+
+atualizarNomesBanco();
+</script>
+</body>
+</html>
