@@ -1,138 +1,199 @@
+
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BANCO ZINHO - Painel Admin Oficial</title>
+    <title>ADM - EletivaBank</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
-        h1, h2 { color: #2c3e50; text-align: center; }
-        .container { max-width: 950px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .secao { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
-        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        button { background-color: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:hover { background-color: #2980b9; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #27ae60; color: white; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        .config-url { background: #e8f4fd; padding: 15px; border-radius: 6px; border: 1px solid #bce0fd; margin-bottom: 20px; }
-        .status-msg { font-weight: bold; margin-top: 5px; font-size: 14px; color: #27ae60; }
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; }
+        .box { border: 2px solid #17a2b8; padding: 15px; border-radius: 8px; background: white; margin-bottom: 20px; display: none; width: 300px; }
+        input { display: block; width: 90%; margin: 5px auto; padding: 8px; }
+        button { background-color: #17a2b8; color: white; border: none; padding: 10px; margin: 5px; cursor: pointer; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #17a2b8; color: white; }
+        footer { margin-top: 30px; text-align: center; color: #777; font-size: 14px; }
+        #painel { width: 100%; max-width: 800px; display: none; }
+        #login { background: white; padding: 30px; border-radius: 10px; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        #busca { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
+        .filtro-data { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>🏦 BANCO ZINHO - Administrador</h1>
-    
-    <div class="config-url">
-        <label style="font-weight: bold; color: #2980b9;">🔗 Link da Planilha do Ecossistema:</label>
-        <input type="text" id="urlPlanilhaGoogle" value="https://docs.google.com/spreadsheets/d/1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4/edit?gid=0#gid=0" readonly style="background:#f1f5f9; color:#64748b;">
-        <div id="statusConexao" class="status-msg">🟢 Conexão direta por JSON ativada!</div>
+    <div id="login">
+        <h2>Bem vindo ao EletivaBank</h2>
+        <h2>Acesso Administrativo</h2>
+        <input type="password" id="senha" placeholder="Senha">
+        <button onclick="acessar()">Entrar</button>
     </div>
 
-    <div class="secao">
-        <h2>1. Sincronização Direta</h2>
-        <button onclick="puxarDadosDaNuvem()" style="background-color: #27ae60; font-size: 16px;">🔄 Ler / Atualizar Dados da Planilha</button>
-    </div>
+    <div id="painel">
+        <h2>Painel de Controle EletivaBank</h2>
+        
+        <input type="text" id="busca" placeholder="🔍 Buscar aluno por nome ou conta..." onkeyup="filtrarTabela()">
 
-    <div class="secao">
-        <h2>2. Lista de Contas Ativas</h2>
+        <button onclick="document.getElementById('form').style.display='block'">+ Cadastrar Aluno</button>
+        <button style="background-color: #007bff;" onclick="document.getElementById('fileInput').click()">📥 Importar CSV</button>
+        <input type="file" id="fileInput" style="display:none" accept=".csv">
+        
+        <div class="filtro-data">
+            <input type="date" id="dataInicio" title="Data Inicial">
+            <input type="date" id="dataFim" title="Data Final">
+            <button style="background-color: #ffc107; color: black;" id="btnExportar">📤 Exportar Transações (CSV)</button>
+        </div>
+
+        <button style="background-color: #6c757d;" onclick="window.location.reload()">Sair</button>
+        
+        <div id="form" class="box">
+            <input type="text" id="conta" placeholder="Conta">
+            <input type="text" id="digito" placeholder="Dígito">
+            <input type="text" id="nome" placeholder="Nome">
+            <input type="text" id="senhaC" placeholder="Senha">
+            <input type="number" id="saldo" placeholder="Saldo Inicial">
+            <button onclick="salvarAluno()">Salvar Aluno</button>
+        </div>
+
         <table>
-            <thead>
-                <tr>
-                    <th>Conta-Dg</th>
-                    <th>Nome do Usuário</th>
-                    <th>Tipo</th>
-                    <th>Senha Acesso</th>
-                    <th>Saldo Atual</th>
-                </tr>
-            </thead>
-            <tbody id="tabelaSaldos">
-                <tr><td colspan="5" style="text-align:center; color:#999;">Clique no botão verde acima para carregar as informações.</td></tr>
-            </tbody>
+            <thead><tr><th>Nome</th><th>Conta</th><th>Dígito</th><th>Senha</th><th>Saldo</th><th>Ações</th></tr></thead>
+            <tbody id="tabela"></tbody>
         </table>
+        <footer>Criado e desenvolvido por Vania Oliveira</footer>
     </div>
-</div>
 
-<script>
-let bancoDados = [];
-const idPlanilha = "1w4kxyesR_b6Z-yXY1O4qIlUdiE0yfwGe6MMZ5o4U2-4"; 
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDocs, getDoc, collection, deleteDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
-async function puxarDadosDaNuvem() {
-    document.getElementById('statusConexao').innerHTML = "🔄 Buscando dados em tempo real...";
-    
-    // API do Google que puxa os dados formatados em JSON independente de publicação externa
-    const urlJSON = `https://docs.google.com/spreadsheets/d/${idPlanilha}/gviz/tq?tqx=out:json&gid=0`;
-    
-    try {
-        const response = await fetch(urlJSON);
-        const texto = await response.text();
-        
-        // Remove a proteção padrão que o Google coloca no JSON
-        const jsonPuro = JSON.parse(texto.substr(47).slice(0, -2));
-        const linhas = jsonPuro.table.rows;
-        
-        bancoDados = [];
-        
-        linhas.forEach((linha) => {
-            // Verifica se as colunas essenciais existem na linha
-            if (linha.c && linha.c[0] && linha.c[2]) {
-                
-                // Pega os valores brutos limpando textos e tratando nulos
-                let contaBruta = linha.c[0].v !== null ? linha.c[0].v.toString().trim() : "";
-                
-                // Ignora a linha do cabeçalho caso ela apareça
-                if (contaBruta.toLowerCase() === "conta") return;
+        const firebaseConfig = { 
+            apiKey: "AIzaSyCG_jh9lDlTj8mAKKm6sYhI9XNSP_OLjFY", 
+            authDomain: "banco-sandra.firebaseapp.com", 
+            projectId: "banco-sandra", 
+            storageBucket: "banco-sandra.firebasestorage.app", 
+            messagingSenderId: "506761695598", 
+            appId: "1:506761695598:web:783a6bfa6d5ff0b143317f" 
+        };
 
-                let contaLimpa = contaBruta.padStart(4, '0');
-                let digitoLimpo = (linha.c[1] && linha.c[1].v !== null) ? linha.c[1].v.toString().trim() : "0";
-                let nomeLimpo = (linha.c[2] && linha.c[2].v !== null) ? linha.c[2].v.toString().trim().toUpperCase() : "";
-                let tipoLimpo = (linha.c[3] && linha.c[3].v !== null) ? linha.c[3].v.toString().trim().toUpperCase() : "CLIENTE";
-                let senhaLimpa = (linha.c[4] && linha.c[4].v !== null) ? linha.c[4].v.toString().trim() : "1234";
-                
-                // O Saldo Atual está na 6ª coluna (Índice 5)
-                let saldoNumero = 0;
-                if (linha.c[5] && linha.c[5].v !== null) {
-                    saldoNumero = typeof linha.c[5].v === 'number' ? linha.c[5].v : parseFloat(linha.c[5].v.toString().replace(',', '.'));
-                }
+        const db = getFirestore(initializeApp(firebaseConfig));
 
-                bancoDados.push({
-                    conta: contaLimpa,
-                    digito: digitoLimpo,
-                    nome: nomeLimpo,
-                    tipo: tipoLimpo,
-                    senha: senhaLimpa,
-                    saldo: isNaN(saldoNumero) ? 0 : saldoNumero
+        window.acessar = () => { 
+            if(document.getElementById('senha').value === "1506") { 
+                document.getElementById('login').style.display='none'; 
+                document.getElementById('painel').style.display='block'; 
+                listar(); 
+            } else { alert("Senha incorreta!"); } 
+        };
+
+        window.toggleSenha = (btn, senha) => {
+            const span = btn.nextElementSibling;
+            span.innerText = (span.innerText === "********") ? senha : "********";
+            btn.innerText = (btn.innerText === "Ver") ? "Ocultar" : "Ver";
+        };
+
+        window.listar = async () => {
+            const snap = await getDocs(collection(db, "usuarios"));
+            const tbody = document.getElementById('tabela');
+            tbody.innerHTML = '';
+            snap.forEach(d => {
+                const u = d.data();
+                const [conta, digito] = d.id.split('-');
+                tbody.innerHTML += `<tr class="linha-aluno">
+                    <td class="nome">${u.nome || ""}</td>
+                    <td class="conta">${conta || ""}</td>
+                    <td>${digito || ""}</td>
+                    <td>
+                        <button onclick="toggleSenha(this, '${u.senha}')" style="padding: 2px 5px; font-size: 10px;">Ver</button>
+                        <span>********</span>
+                    </td>
+                    <td>R$ ${parseFloat(u.saldo || 0).toFixed(2)}</td>
+                    <td><button onclick="ajustar('${d.id}', ${u.saldo}, '${u.nome}')">+/- Saldo</button><button onclick="excluir('${d.id}')">Excluir</button></td>
+                </tr>`;
+            });
+        };
+
+        window.filtrarTabela = () => {
+            const busca = document.getElementById('busca').value.toLowerCase();
+            document.querySelectorAll('.linha-aluno').forEach(linha => {
+                const nome = linha.querySelector('.nome').innerText.toLowerCase();
+                const conta = linha.querySelector('.conta').innerText.toLowerCase();
+                linha.style.display = (nome.includes(busca) || conta.includes(busca)) ? '' : 'none';
+            });
+        };
+
+        window.ajustar = async (id, saldoAtual, nome) => {
+            const valor = parseFloat(prompt("Valor:"));
+            const obs = prompt("Observação:");
+            if(!isNaN(valor)) {
+                await runTransaction(db, async (t) => {
+                    t.update(doc(db, "usuarios", id), { saldo: saldoAtual + valor });
+                    t.set(doc(collection(db, "transacoes")), { 
+                        origem: "ADMIN", 
+                        nomeOrigem: "Administrador", 
+                        destino: id, 
+                        nomeDestino: nome, 
+                        valor: valor, 
+                        obs: obs || "Sem observação", 
+                        data: new Date() 
+                    });
                 });
+                listar();
             }
-        });
-        
-        atualizarInterface();
-        document.getElementById('statusConexao').innerHTML = `🟢 Sucesso! ${bancoDados.length} contas carregadas via JSON.`;
-    } catch (erro) {
-        console.error(erro);
-        document.getElementById('statusConexao').innerHTML = "<span style='color: #c0392b;'>❌ Erro. Certifique-se de que o botão 'Compartilhar' da Planilha está para 'Qualquer pessoa com o link'.</span>";
-    }
-}
+        };
 
-function atualizarInterface() {
-    const tabela = document.getElementById('tabelaSaldos');
-    tabela.innerHTML = '';
-    if(bancoDados.length === 0) {
-        tabela.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999;">Nenhum dado encontrado. Verifique se a planilha tem dados a partir da linha 2.</td></tr>`;
-        return;
-    }
-    bancoDados.forEach(p => {
-        tabela.innerHTML += `<tr>
-            <td><code>${p.conta}-${p.digito}</code></td>
-            <td>${p.nome}</td>
-            <td><small>${p.tipo}</small></td>
-            <td><code>${p.senha}</code></td>
-            <td style="font-weight:bold; color:#27ae60;">${p.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-        </tr>`;
-    });
-}
-</script>
+        document.getElementById('btnExportar').onclick = async () => {
+            const inicio = document.getElementById('dataInicio').value;
+            const fim = document.getElementById('dataFim').value;
+            
+            const snap = await getDocs(collection(db, "transacoes"));
+            
+            // Cache para evitar muitas chamadas ao banco caso tenhamos muitas transações
+            const usuariosCache = {}; 
+            const snapUsers = await getDocs(collection(db, "usuarios"));
+            snapUsers.forEach(u => usuariosCache[u.id] = u.data().nome);
+
+            let csv = "\ufeffNome Origem;Nome Destino;Conta Destino;Valor;Data;Observação\n";
+            
+            for (const d of snap.docs) { 
+                const t = d.data(); 
+                const dataTransacao = t.data.toDate();
+                const dataStr = dataTransacao.toISOString().split('T')[0];
+
+                if ((!inicio || dataStr >= inicio) && (!fim || dataStr <= fim)) {
+                    // Tenta pegar o nome da origem salva. Se não houver, usa o ID da conta de origem no cache.
+                    const nomeOrigem = t.nomeOrigem || usuariosCache[t.origem] || t.origem || "Desconhecido";
+                    const nomeDestino = t.nomeDestino || usuariosCache[t.destino] || "Desconhecido";
+                    
+                    csv += `${nomeOrigem};${nomeDestino};${t.destino || ""};${t.valor};${dataTransacao.toLocaleString()};${t.obs}\n`; 
+                }
+            }
+            
+            const link = document.createElement("a");
+            const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+            link.href = URL.createObjectURL(blob);
+            link.download = "relatorio_transacoes.csv";
+            link.click();
+        };
+
+        window.salvarAluno = async () => {
+            const id = document.getElementById('conta').value + "-" + document.getElementById('digito').value;
+            await setDoc(doc(db, "usuarios", id), { nome: document.getElementById('nome').value, senha: document.getElementById('senhaC').value, saldo: parseFloat(document.getElementById('saldo').value || 0) });
+            listar();
+        };
+
+        window.excluir = async (id) => { if(confirm("Excluir?")) { await deleteDoc(doc(db, "usuarios", id)); listar(); } };
+
+        document.getElementById('fileInput').onchange = (e) => {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const linhas = event.target.result.split(/\r?\n/);
+                for (let linha of linhas) {
+                    const [nome, conta, digito, senha, saldo] = linha.split(';');
+                    if (conta && digito) await setDoc(doc(db, "usuarios", `${conta}-${digito}`), { nome, senha, saldo: parseFloat(saldo) || 0 });
+                }
+                alert("Concluído!"); listar();
+            };
+            reader.readAsText(e.target.files[0]);
+        };
+    </script>
 </body>
 </html>
